@@ -14,7 +14,7 @@ st.set_page_config(
 
 # ─── СЕССИЯ ЖАҒДАЙЫН (STATE) ИНИЦИАЛИЗАЦИЯЛАУ ──────────────────────
 if 'lang' not in st.session_state:
-    st.session_state.lang = 'ru'
+    st.session_state.lang = 'kz'
 if 'theme' not in st.session_state:
     st.session_state.theme = 'light'
 
