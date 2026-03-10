@@ -359,3 +359,45 @@ if uploaded_file:
             st.markdown(f"{icon} **{p['Критерий']}** — {p['Найдено']} *({l['req']}: {p['Требование']})*")
 else:
     st.info(l['no_file'])
+    # Word (DOCX)
+    def build_docx_report(results, l):
+        docx_buf = BytesIO()
+        d = Document()
+        d.add_heading(l['res_title'], level=1)
+        # Сводные показатели
+        p = d.add_paragraph()
+        p.add_run(f"{l['total']}: {total}, ").bold = True
+        p.add_run(f"{l['passed']}: {passed}, ")
+        p.add_run(f"{l['warned']}: {warned}, ")
+        p.add_run(f"{l['failed']}: {failed}, ")
+        p.add_run(f"{l['score']}: {score}%")
+
+        d.add_paragraph("")  # отступ
+
+        table = d.add_table(rows=1, cols=5)
+        hdr = table.rows[0].cells
+        hdr[0].text = "№"
+        hdr[1].text = "Критерий"
+        hdr[2].text = "Требование"
+        hdr[3].text = "Найдено"
+        hdr[4].text = "Статус"
+
+        for r in results:
+            row_cells = table.add_row().cells
+            row_cells[0].text = str(r["№"])
+            row_cells[1].text = str(r["Критерий"])
+            row_cells[2].text = str(r["Требование"])
+            row_cells[3].text = str(r["Найдено"])
+            row_cells[4].text = str(r["Статус"])
+
+        d.save(docx_buf)
+        docx_buf.seek(0)
+        return docx_buf.getvalue()
+
+    docx_bytes = build_docx_report(results, l)
+    col_c.download_button(
+        "⬇️ Word (DOCX)",
+        docx_bytes,
+        f"{base_name}.docx",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    )
