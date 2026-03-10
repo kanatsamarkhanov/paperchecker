@@ -86,8 +86,6 @@ locales = {
         "c_images_req": "Мин. 300 DPI (вручную)",
         "c_multi_ann": "Многоязычные аннотации",
         "c_multi_ann_req": "Ещё 2 аннотации на других языках",
-        "c_type": "Тип статьи и соответствие объёму",
-        "c_type_req": "Обзор/мини-обзор/исследовательская",
         "c_translit": "Транслитерация источников",
         "c_translit_req": "Для рус/каз источников — латиница",
         "found": "Найдено",
@@ -160,8 +158,6 @@ locales = {
         "c_images_req": "Мин. 300 DPI (қолмен тексеру)",
         "c_multi_ann": "Көптілді аңдатпалар",
         "c_multi_ann_req": "Басқа 2 тілде аңдатпа болуы керек",
-        "c_type": "Мақала түрі және сәйкестігі",
-        "c_type_req": "Шолу/шағын шолу/зерттеу мақаласы",
         "c_translit": "Транслитерация (дереккөздер)",
         "c_translit_req": "Орыс/қаз дереккөздері үшін — латын",
         "found": "Табылды",
@@ -205,23 +201,16 @@ st.caption(l["subtitle"])
 st.markdown("---")
 
 # ─── HELPERS ───────────────────────────────────────────────────────
-# Шаблонды/техникалық жолдарды елемейтін тізім
 _SKIP_PATTERNS = re.compile(
     r"приложение|қосымша|appendix|мрнти|irsti|orcid|e-mail|аффилиация|affiliation"
-    r"|affiliation|секция|section|тип статьи|мақала түрі|type of the paper"
+    r"|секция|section|тип статьи|мақала түрі|type of the paper"
     r"|корреспонд|correspondence|copyright|citation|цитирование|дәйексөз"
     r"|received|поступила|accepted|published|academic editor|vest_chem"
-    r"|beisemb|гумилева|gumilyov|doi\.org|http|https",
+    r"|beisemb|гумилева|gumilyov|doi\\.org|http|https",
     re.IGNORECASE,
 )
 
 def extract_author_and_lang(doc: Document):
-    """
-    Автордың аты-жөнін мақала тақырыбынан кейінгі алғашқы сәйкес жолдан алады.
-    Тілді бүкіл мәтін бойынша кілт сөздермен анықтайды.
-    Қайтарады: (author_str, main_lang)
-    """
-    # --- тіл анықтау ---
     full = "\n".join(p.text for p in doc.paragraphs).lower()
     if any(k in full for k in ["кіріспе", "қорытынды", "мақала", "нәтижелер", "аңдатпа"]):
         main_lang = "kz"
@@ -230,9 +219,6 @@ def extract_author_and_lang(doc: Document):
     else:
         main_lang = "ru"
 
-    # --- автор аты ---
-    # Тек мақала шапкасынан (алғашқы 25 абзац) іздейміз,
-    # Список литературы/References/Әдебиет тізімі табылса тоқтаймыз.
     author_str = ""
     header_paragraphs = []
     for p in doc.paragraphs[:25]:
@@ -244,28 +230,21 @@ def extract_author_and_lang(doc: Document):
         header_paragraphs.append(txt)
 
     for line in header_paragraphs:
-        # шаблондық / техникалық жолдарды өткізіп жіберу
         if _SKIP_PATTERNS.search(line):
             continue
-        # сандармен немесе тек латын/кирилл емес символдармен басталатын жолдарды өткізу
         if re.match(r"^[\d\s\*©\^]", line):
             continue
-        # мақала тақырыбы - ол ұзын болады (>8 сөз), авторлар жолы қысқа болады
         words = line.split()
         if len(words) > 12:
             continue
-        # Авторлар жолы: «Аты Тегі^1^, Аты Тегі^2^» форматы
-        # Кирилл немесе латын бас әрптен басталатын 2+ сөз
         cleaned = re.sub(r"\d+[\*,]?", "", line).strip()
         cleaned = re.sub(r"\^[^|]*\^", "", cleaned).strip()
-        # «және», «и», «and» арқылы бөлінген авторлар
         cleaned = re.sub(r"\s+(және|и|and)\s+", ", ", cleaned, flags=re.IGNORECASE)
         parts = [p.strip() for p in cleaned.split(",") if p.strip()]
         if not parts:
             continue
         first = parts[0]
         name_words = first.split()
-        # Кем дегенде 2 сөз, бас әрптен басталу керек
         if len(name_words) >= 2 and re.match(r"[А-ЯЁA-ZҒҚҢӨҰҮІӘ]", name_words[0]):
             author_str = first
             break
@@ -277,11 +256,9 @@ def extract_author_and_lang(doc: Document):
 
 
 def author_for_filename(author_str: str) -> str:
-    """Файл атауы үшін: бос орындар мен арнайы таңбаларды алып тастайды."""
     if "Анықталмады" in author_str or "Не найдено" in author_str:
         return "report"
     return re.sub(r"[^А-Яа-яA-Za-zҒғҚқҢңӨөҰұҮүІіӘә-]", "", author_str.replace(" ", "_"))
-
 
 # ─── MAIN CHECK FUNCTION ───────────────────────────────────────────
 def check_article(doc: Document, l: dict):
@@ -301,22 +278,19 @@ def check_article(doc: Document, l: dict):
             "Статус": status,
         })
 
-    # 0. Автор аты-жөні
+    # 0. Автор
     is_author_found = "Анықталмады" not in author_str and "Не найдено" not in author_str
-    add(0, l["c_author"], l["c_author_req"],
-        author_str, "✅" if is_author_found else "⚠️")
+    add(0, l["c_author"], l["c_author_req"], author_str, "✅" if is_author_found else "⚠️")
 
-    # 0b. Мақала тілі
+    # 1. Язык
     lang_map = {"ru": "Русский", "kz": "Қазақша", "en": "English"}
-    add(1, l["c_lang"], l["c_lang_req"],
-        lang_map.get(main_lang, main_lang), "✅")
+    add(1, l["c_lang"], l["c_lang_req"], lang_map.get(main_lang, main_lang), "✅")
 
-    # 1. Объём
-    add(2, l["c_vol"], l["c_vol_req"],
-        f"{word_count} {l['words']}",
+    # 2. Объём
+    add(2, l["c_vol"], l["c_vol_req"], f"{word_count} {l['words']}",
         "✅" if word_count >= 3500 else "⚠️")
 
-    # 2–4. Аннотации
+    # 3–5. Аннотации
     abstract_ru = re.search(
         r"аннотация[:\s]+(.{50,}?)(?=ключевые|keywords|түйін|abstract)",
         full_text, re.IGNORECASE | re.DOTALL,
@@ -340,20 +314,19 @@ def check_article(doc: Document, l: dict):
         l["found"] if has_eng_ann else l["not_found"],
         "✅" if has_eng_ann else "❌")
 
-    # 5. Ключевые слова
+    # 6. Ключевые слова
     kw_match = re.search(
         r"(ключевые слова|keywords|түйінді сөздер|түйін сөздер)[:\s]+(.+?)(\n|$)",
         full_text, re.IGNORECASE,
     )
     if kw_match:
         kw_list = [k.strip() for k in kw_match.group(2).split(";") if k.strip()]
-        add(6, l["c_kw"], l["c_kw_req"],
-            f"{len(kw_list)}",
+        add(6, l["c_kw"], l["c_kw_req"], f"{len(kw_list)}",
             "✅" if 3 <= len(kw_list) <= 10 else "❌")
     else:
         add(6, l["c_kw"], l["c_kw_req"], l["not_found"], "⚠️")
 
-    # 6-7. МРНТИ / ORCID
+    # 7–8. МРНТИ / ORCID
     mrnt = bool(re.search(r"МРНТИ|IRSTI|\d{2}\.\d{2}\.\d{2}", full_text))
     add(7, l["c_mrnti"], l["c_req_obl"],
         l["found"] if mrnt else l["not_found"],
@@ -365,13 +338,14 @@ def check_article(doc: Document, l: dict):
         f"{orcid_count} ORCID",
         "✅" if orcid_count >= 1 else "⚠️")
 
-    # §1-5 основные разделы
+    # 9–13. Негізгі бөлімдер
     sections = [
-        (9,  l["c_intro"], ["введение", "кіріспе", "introduction"]),
-        (10, l["c_mm"],    ["материал", "әдістер", "materials and methods"]),
-        (11, l["c_res"],   ["результат", "нәтижелер", "results"]),
-        (12, l["c_disc"],  ["обсужден", "талдау", "талқылау", "discussion"]),
-        (13, l["c_concl"], ["заключени", "қорытынды", "conclusion"]),
+        (9,  l["c_intro"], ["1. введение", "1. кіріспе", "1. introduction", "введение", "кіріспе", "introduction"]),
+        (10, l["c_mm"],    ["2. материалы и методы", "2. материалдар мен әдістер", "2. materials and methods",
+                            "материал", "әдістер", "materials and methods"]),
+        (11, l["c_res"],   ["3. результаты", "3. нәтижелер", "3. results", "результат", "нәтижелер", "results"]),
+        (12, l["c_disc"],  ["4. обсуждение", "4. талқылау", "4. discussion", "обсужден", "талқылау", "discussion"]),
+        (13, l["c_concl"], ["5. заключение", "5. қорытынды", "5. conclusion", "заключени", "қорытынды", "conclusion"]),
     ]
     for num, name, keys in sections:
         found = any(k in text_low for k in keys)
@@ -379,48 +353,56 @@ def check_article(doc: Document, l: dict):
             l["found"] if found else l["not_found"],
             "✅" if found else "❌")
 
-    # §6-11 доп. разделы
-    has_supp = any(k in text_low for k in ["вспомогательн", "қосымша материал", "supplementary materials"])
+    # 14–18. Доп. разделы
+    has_supp = any(k in text_low for k in ["6. вспомогательный материал", "6. қосымша материалдар",
+                                           "6. supplementary materials", "supplementary materials"])
     add(14, l["c_supp"], l["c_req_obl"],
         l["found"] if has_supp else l["not_found"],
         "✅" if has_supp else "⚠️")
 
     contrib = any(k in text_low for k in [
-        "вклад авторов", "вклады авторов", "author contributions",
+        "7. вклады авторов", "7. вклад авторов", "7. авторлардың үлесі",
+        "7. author contributions", "вклад авторов", "author contributions",
         "авторлық үлестер", "авторлардың үлесі"])
     add(15, l["c_contrib"], "CRediT",
         l["found"] if contrib else l["not_found"],
         "✅" if contrib else "❌")
 
     authinfo = any(k in text_low for k in [
-        "информация об авторе", "автор туралы ақпарат", "author information"])
+        "8. информация об авторе", "8. автор туралы ақпарат",
+        "8. author information", "информация об авторе",
+        "автор туралы ақпарат", "author information"])
     add(16, l["c_authinfo"], l["c_req_obl"],
         l["found"] if authinfo else l["not_found"],
         "✅" if authinfo else "⚠️")
 
-    fund = any(k in text_low for k in ["финансирован", "funding", "қаржыландыру"])
+    fund = any(k in text_low for k in [
+        "9. финансирование", "9. қаржыландыру", "9. funding",
+        "финансирован", "funding", "қаржыландыру"])
     add(17, l["c_fund"], l["c_req_obl"],
         l["found"] if fund else l["not_found"],
         "✅" if fund else "❌")
 
     ack = any(k in text_low for k in [
+        "10. благодарности", "10. алғыстар", "10. acknowledgements",
         "благодарност", "алғыстар", "acknowledgements", "acknowledgments"])
     add(18, l["c_ack"], l["c_req_obl"],
         l["found"] if ack else l["not_found"],
         "✅" if ack else "⚠️")
 
-    # §11 Конфликт интересов — ищем по номеру секции или ключевым словам
+    # 19. Конфликт интересов (пункт 11)
     conflict = any(k in text_low for k in [
-        "конфликт интересов", "конфликты интересов",
-        "conflict of interest", "мүдделер қақтығысы"])
+        "11. конфликты интересов", "11. конфликт интересов",
+        "11. conflicts of interest", "11. мүдделер қақтығысы",
+        "конфликт интересов", "conflict of interest", "мүдделер қақтығысы"])
     add(19, l["c_conflict"], l["c_req_obl"],
         l["found"] if conflict else l["not_found"],
         "✅" if conflict else "❌")
 
-    # §12 Список литературы / Әдебиет тізімі / References
+    # 20–22. References – нақты 12‑ші пункттен кейін
     refs_block = ""
     m_refs = re.search(
-        r"(список литературы|references|әдебиет тізімі)(.*)$",
+        r"12\.\s*(references|әдебиеттер тізімі|әдебиет тізімі|список литературы)(.*)$",
         full_text, re.IGNORECASE | re.DOTALL,
     )
     if m_refs:
@@ -428,8 +410,7 @@ def check_article(doc: Document, l: dict):
 
     total_refs = len(re.findall(r"(?m)^\s*\d+\.\s+\S", refs_block))
     add(20, l["c_refs"], l["c_refs_req"],
-        f"{total_refs}",
-        "✅" if total_refs >= 25 else "❌")
+        f"{total_refs}", "✅" if total_refs >= 25 else "❌")
 
     doi_count = len(re.findall(r"https?://doi\.org/", refs_block))
     add(21, l["c_doi"], l["c_req_obl"],
@@ -441,7 +422,7 @@ def check_article(doc: Document, l: dict):
         l["found"] if apa_style else l["not_found"],
         "✅" if apa_style else "⚠️")
 
-    # Техническое: бумага, поля
+    # 23–25. Формат, поля, шрифт
     try:
         sec = doc.sections[0]
         w_mm = round(sec.page_width.mm)
@@ -461,7 +442,6 @@ def check_article(doc: Document, l: dict):
         add(23, l["c_paper"], l["c_paper_req"], "Қате/Ошибка", "⚠️")
         add(24, l["c_margins"], l["c_margins_req"], "Қате/Ошибка", "⚠️")
 
-    # Шрифт
     try:
         fn = doc.styles["Normal"].font.name or "?"
         fs = (doc.styles["Normal"].font.size.pt
@@ -472,7 +452,7 @@ def check_article(doc: Document, l: dict):
     except Exception:
         add(25, l["c_font"], l["c_font_req"], "Қате/Ошибка", "⚠️")
 
-    # Таблицы и рисунки
+    # 26–27. Таблицы/рисунки
     tbl_count = len(doc.tables)
     add(26, l["c_tables"], l["c_tables_req"],
         f"{tbl_count} шт.", "✅" if tbl_count > 0 else "⚠️")
@@ -481,7 +461,7 @@ def check_article(doc: Document, l: dict):
     add(27, l["c_images"], l["c_images_req"],
         f"{img_count} шт.", "⚠️" if img_count > 0 else "✅")
 
-    # Многоязычные аннотации
+    # 28. Многоязычные аннотации
     if main_lang == "ru":
         ok_multi = has_kaz_ann and has_eng_ann
     elif main_lang == "kz":
@@ -492,59 +472,20 @@ def check_article(doc: Document, l: dict):
         l["found"] if ok_multi else l["not_found"],
         "✅" if ok_multi else "❌")
 
-    # Тип статьи: сначала ищем ключевые слова типа в шапке (первые 15 абзацев)
-    header_low = "\n".join(p.text for p in doc.paragraphs[:15]).lower()
-    # Потом во всём тексте
-    article_type_label = ""
-    ok_type = False
-
-    is_review = bool(re.search(r"\bобзор\b|\bшолу\b|\breview\b", header_low + text_low))
-    is_mini = bool(re.search(r"мини.?обзор|шағын.?шолу|mini.?review", header_low + text_low))
-    is_research = bool(re.search(
-        r"зерттеу мақаласы|исследовательская статья|research article|research paper"
-        r"|ғылыми мақала|article\b", header_low + text_low))
-
-    if is_mini and 6000 <= word_count <= 10000 and total_refs >= 50:
-        article_type_label = "Мини-обзор / шағын шолу (6000–10000 сөз, ≥50)"
-        ok_type = True
-    elif is_review and not is_mini and word_count >= 10000 and total_refs >= 100:
-        article_type_label = "Обзор / шолу (≥10000 сөз, ≥100)"
-        ok_type = True
-    elif is_research and word_count >= 3500 and total_refs >= 25:
-        article_type_label = "Зерттеу мақаласы / research article (≥3500 сөз, ≥25)"
-        ok_type = True
-    else:
-        # Автоматты анықтау - тек көлем мен дереккөз санына сүйену
-        if word_count >= 10000 and total_refs >= 100:
-            article_type_label = f"Обзор (предположительно): {word_count} сөз, {total_refs} дереккөз"
-            ok_type = True
-        elif 6000 <= word_count <= 10000 and total_refs >= 50:
-            article_type_label = f"Мини-обзор (предположительно): {word_count} сөз, {total_refs} дереккөз"
-            ok_type = True
-        elif word_count >= 3500 and total_refs >= 25:
-            article_type_label = f"Research article (предположительно): {word_count} сөз, {total_refs} дереккөз"
-            ok_type = True
-        else:
-            article_type_label = f"Анықталмады: {word_count} сөз, {total_refs} дереккөз"
-            ok_type = False
-
-    add(29, l["c_type"], l["c_type_req"],
-        article_type_label, "✅" if ok_type else "⚠️")
-
-    # Транслитерация (только для EN)
+    # 29. Транслитерация (только EN)
     if main_lang == "en":
         has_cyrillic = bool(re.search(r"[А-Яа-яЁёҒғҚқҢңӨөҰұҮүІіӘә]", refs_block))
-        has_translit = bool(re.search(r"in Russian|in Kazakh|Teorija|Almaty|Astana|translit", refs_block, re.IGNORECASE))
+        has_translit = bool(re.search(r"in Russian|in Kazakh|Teorija|Almaty|Astana|translit",
+                                      refs_block, re.IGNORECASE))
         ok_tr = (not has_cyrillic) or has_translit
-        add(30, l["c_translit"], l["c_translit_req"],
+        add(29, l["c_translit"], l["c_translit_req"],
             l["found"] if ok_tr else "Кириллица без транслитерации",
             "✅" if ok_tr else "⚠️")
     else:
-        add(30, l["c_translit"], l["c_translit_req"],
+        add(29, l["c_translit"], l["c_translit_req"],
             "Не требуется", "✅")
 
     return results, full_text, author_str, main_lang
-
 
 # ─── DOCX REPORT ──────────────────────────────────────────────────
 def build_docx_report(results, l, total, passed, warned, failed, score):
@@ -568,7 +509,6 @@ def build_docx_report(results, l, total, passed, warned, failed, score):
     d.save(buf)
     buf.seek(0)
     return buf.getvalue()
-
 
 # ─── UI ───────────────────────────────────────────────────────────
 uploaded_file = st.file_uploader(l["upload_title"], type=["docx"], help=l["upload_help"])
@@ -616,27 +556,37 @@ if uploaded_file:
     col_a, col_b, col_c = st.columns(3)
     base_name = f"compliance_{author_for_filename(author_str)}"
 
-    col_a.download_button(l["btn_csv"],
+    col_a.download_button(
+        l["btn_csv"],
         df.to_csv(index=False).encode("utf-8-sig"),
-        f"{base_name}.csv", "text/csv")
+        f"{base_name}.csv",
+        "text/csv",
+    )
 
     xbuf = BytesIO()
     with pd.ExcelWriter(xbuf, engine="openpyxl") as w:
         df.to_excel(w, index=False, sheet_name="Report")
-    col_b.download_button(l["btn_xls"], xbuf.getvalue(),
+    col_b.download_button(
+        l["btn_xls"], xbuf.getvalue(),
         f"{base_name}.xlsx",
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
 
-    col_c.download_button(l["btn_docx"],
+    col_c.download_button(
+        l["btn_docx"],
         build_docx_report(results, l, total, passed, warned, failed, score),
         f"{base_name}.docx",
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    )
 
     problems = [r for r in results if r["Статус"] in ("❌", "⚠️")]
     if problems:
         st.markdown(l["req_fix"])
         for p in problems:
             icon = "🔴" if p["Статус"] == "❌" else "🟡"
-            st.markdown(f"{icon} **{p['Критерий']}** — {p['Найдено']} *({l['req']}: {p['Требование']})*")
+            st.markdown(
+                f"{icon} **{p['Критерий']}** — {p['Найдено']} "
+                f"*({l['req']}: {p['Требование']})*"
+            )
 else:
     st.info(l["no_file"])
