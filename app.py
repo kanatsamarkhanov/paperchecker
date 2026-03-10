@@ -390,7 +390,7 @@ uploaded_file = st.file_uploader(
 )
 
 if uploaded_file:
-    with st.spinner(l['analyzing']:
+    with st.spinner(l['analyzing']):
         doc = Document(uploaded_file)
         results, full_text = check_article(doc, l)
         df = pd.DataFrame(results)
