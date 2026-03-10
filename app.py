@@ -392,9 +392,7 @@ def check_article(doc: Document, l: dict):
 
     # 19. Конфликт интересов (пункт 11)
     conflict = any(k in text_low for k in [
-        "11. конфликты интересов", "11. конфликт интересов",
-        "11. conflicts of interest", "11. мүдделер қақтығысы",
-        "конфликт интересов", "conflict of interest", "мүдделер қақтығысы"])
+    "конфликт интересов", "conflicts of interest", "мүдделер қақтығысы"])
     add(19, l["c_conflict"], l["c_req_obl"],
         l["found"] if conflict else l["not_found"],
         "✅" if conflict else "❌")
@@ -402,9 +400,9 @@ def check_article(doc: Document, l: dict):
     # 20–22. References – нақты 12‑ші пункттен кейін
     refs_block = ""
     m_refs = re.search(
-        r"12\.\s*(references|әдебиеттер тізімі|әдебиет тізімі|список литературы)(.*)$",
-        full_text, re.IGNORECASE | re.DOTALL,
-    )
+    r"(references|әдебиеттер тізімі|әдебиет тізімі|список литературы)(.*)$",
+    full_text, re.IGNORECASE | re.DOTALL
+)
     if m_refs:
         refs_block = m_refs.group(2)
 
