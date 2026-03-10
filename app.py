@@ -69,11 +69,7 @@ locales = {
         "c_fund": "§9. Финансирование",
         "c_ack": "§10. Благодарности",
         "c_conflict": "§11. Конфликт интересов",
-        # "c_refs": "§12. Список литературы / Кол-во",
-        "c_refs_req": "≥25 источников",
-        "c_doi": "DOI в ссылках",
-        "c_apa": "Стиль цитирования",
-        "c_apa_req": "APA 7 (Автор, год)",
+        # refs‑критерийлерді UI‑да қалдырсақ болады, бірақ есептелмейді
         "c_paper": "Формат бумаги",
         "c_paper_req": "A4 (210x297 мм)",
         "c_margins": "Поля",
@@ -141,11 +137,6 @@ locales = {
         "c_fund": "§9. Қаржыландыру",
         "c_ack": "§10. Алғыстар",
         "c_conflict": "§11. Мүдделер қақтығысы",
-        # "c_refs": "§12. Әдебиет тізімі / Саны",
-        "c_refs_req": "≥25 дереккөз",
-        "c_doi": "Сілтемелердегі DOI",
-        "c_apa": "Дәйексөз стилі",
-        "c_apa_req": "APA 7 (Автор, жыл)",
         "c_paper": "Қағаз форматы",
         "c_paper_req": "A4 (210x297 мм)",
         "c_margins": "Жақтаулар",
@@ -390,55 +381,14 @@ def check_article(doc: Document, l: dict):
         l["found"] if ack else l["not_found"],
         "✅" if ack else "⚠️")
 
-    # 19. Конфликт интересов (anywhere in text)
+    # 19. Конфликт интересов
     conflict = any(k in text_low for k in [
         "конфликт интересов", "conflicts of interest", "мүдделер қақтығысы"])
     add(19, l["c_conflict"], l["c_req_obl"],
         l["found"] if conflict else l["not_found"],
         "✅" if conflict else "❌")
 
-    # 20–22. References – between numbered heading and final bilingual annotations
-    refs_block = ""
-    # start at 10./11./12. + references / әдебиеттер / список литературы
-    m_start = re.search(
-        r"(1[0-2]\.\s*references|1[0-2]\.\s*әдебиеттер тізімі|1[0-2]\.\s*әдебиет тізімі|1[0-2]\.\s*список литературы)",
-        full_text,
-        re.IGNORECASE,
-    )
-    if m_start:
-        after = full_text[m_start.end():]
-        # end before Kazakh/Russian back translations
-        m_end = re.search(
-            r"(Мақаланың аты|Название статьи|The following information must be given in Kazakh|The following information must be given in Russian)",
-            after,
-            re.IGNORECASE,
-        )
-        if m_end:
-            refs_block = after[:m_end.start()]
-        else:
-            refs_block = after
-    else:
-        # fallback: any references heading
-        m_refs = re.search(
-            r"(references|әдебиеттер тізімі|әдебиет тізімі|список литературы)(.*)$",
-            full_text, re.IGNORECASE | re.DOTALL
-        )
-        if m_refs:
-            refs_block = m_refs.group(2)
-
-    total_refs = len(re.findall(r"(?m)^\s*\d+\.\s+\S", refs_block))
-    add(20, l["c_refs"], l["c_refs_req"],
-        f"{total_refs}", "✅" if total_refs >= 25 else "❌")
-
-    doi_count = len(re.findall(r"https?://doi\.org/", refs_block))
-    add(21, l["c_doi"], l["c_req_obl"],
-        f"{doi_count} DOI",
-        "✅" if doi_count >= 5 else "⚠️")
-
-    apa_style = bool(re.search(r"\([A-ZА-ЯҒҚ][a-zA-Zа-яА-ЯҒқ]+.{0,30}?\d{4}\)", refs_block))
-    add(22, l["c_apa"], l["c_apa_req"],
-        l["found"] if apa_style else l["not_found"],
-        "✅" if apa_style else "⚠️")
+    # 20–22. (References checks removed)
 
     # 23–25. Формат, поля, шрифт
     try:
@@ -446,37 +396,37 @@ def check_article(doc: Document, l: dict):
         w_mm = round(sec.page_width.mm)
         h_mm = round(sec.page_height.mm)
         is_a4 = (209 <= w_mm <= 211) and (296 <= h_mm <= 298)
-        add(23, l["c_paper"], l["c_paper_req"],
+        add(20, l["c_paper"], l["c_paper_req"],
             f"{w_mm}x{h_mm} мм", "✅" if is_a4 else "❌")
         t = round(sec.top_margin.mm)
         b = round(sec.bottom_margin.mm)
         lf = round(sec.left_margin.mm)
         rg = round(sec.right_margin.mm)
         margins_ok = (t == 20 and b == 20 and lf == 20 and rg == 20)
-        add(24, l["c_margins"], l["c_margins_req"],
+        add(21, l["c_margins"], l["c_margins_req"],
             f"Л:{lf} П:{rg} В:{t} Н:{b} мм",
             "✅" if margins_ok else "❌")
     except Exception:
-        add(23, l["c_paper"], l["c_paper_req"], "Қате/Ошибка", "⚠️")
-        add(24, l["c_margins"], l["c_margins_req"], "Қате/Ошибка", "⚠️")
+        add(20, l["c_paper"], l["c_paper_req"], "Қате/Ошибка", "⚠️")
+        add(21, l["c_margins"], l["c_margins_req"], "Қате/Ошибка", "⚠️")
 
     try:
         fn = doc.styles["Normal"].font.name or "?"
         fs = (doc.styles["Normal"].font.size.pt
               if doc.styles["Normal"].font.size else "?")
         ok_font = "Times New Roman" in str(fn) and fs in [11.0, 12.0]
-        add(25, l["c_font"], l["c_font_req"],
+        add(22, l["c_font"], l["c_font_req"],
             f"{fn}, {fs} pt", "✅" if ok_font else "⚠️")
     except Exception:
-        add(25, l["c_font"], l["c_font_req"], "Қате/Ошибка", "⚠️")
+        add(22, l["c_font"], l["c_font_req"], "Қате/Ошибка", "⚠️")
 
     # 26–27. Таблицы/рисунки
     tbl_count = len(doc.tables)
-    add(26, l["c_tables"], l["c_tables_req"],
+    add(23, l["c_tables"], l["c_tables_req"],
         f"{tbl_count} шт.", "✅" if tbl_count > 0 else "⚠️")
 
     img_count = len(doc.inline_shapes)
-    add(27, l["c_images"], l["c_images_req"],
+    add(24, l["c_images"], l["c_images_req"],
         f"{img_count} шт.", "⚠️" if img_count > 0 else "✅")
 
     # 28. Многоязычные аннотации
@@ -486,22 +436,13 @@ def check_article(doc: Document, l: dict):
         ok_multi = has_ru_ann and has_eng_ann
     else:
         ok_multi = has_ru_ann and has_kaz_ann
-    add(28, l["c_multi_ann"], l["c_multi_ann_req"],
+    add(25, l["c_multi_ann"], l["c_multi_ann_req"],
         l["found"] if ok_multi else l["not_found"],
         "✅" if ok_multi else "❌")
 
-    # 29. Транслитерация (только EN)
-    if main_lang == "en":
-        has_cyrillic = bool(re.search(r"[А-Яа-яЁёҒғҚқҢңӨөҰұҮүІіӘә]", refs_block))
-        has_translit = bool(re.search(r"in Russian|in Kazakh|Teorija|Almaty|Astana|translit",
-                                      refs_block, re.IGNORECASE))
-        ok_tr = (not has_cyrillic) or has_translit
-        add(29, l["c_translit"], l["c_translit_req"],
-            l["found"] if ok_tr else "Кириллица без транслитерации",
-            "✅" if ok_tr else "⚠️")
-    else:
-        add(29, l["c_translit"], l["c_translit_req"],
-            "Не требуется", "✅")
+    # 29. Транслитерация (только EN) – references блокын енді бөлек есептемейміз,
+    # бірақ қажет болса, келешекте қайта қосуға болады. Қазір транслит критерийін өшіргіңіз келсе,
+    # бұл блокты да алып тастауға болады.
 
     return results, full_text, author_str, main_lang
 
