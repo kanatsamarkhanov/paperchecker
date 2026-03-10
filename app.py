@@ -152,20 +152,29 @@ st.caption(l['subtitle'])
 st.markdown("---")
 
 # ─── ВСПОМОГАТЕЛЬНАЯ ФУНКЦИЯ: ФАМИЛИЯ ПЕРВОГО АВТОРА ──────────────
-def extract_first_author_surname(doc: Document) -> str:
-    """Пытаемся вытащить фамилию первого автора из первых абзацев.
-    Ожидаем формат: Имя Фамилия ... или Фамилия Имя ...
-    Если не получилось — возвращаем 'report'.
+def extract_first_author_name_surname(doc: Document) -> str:
+    """
+    Возвращает строку 'ИмяФамилия' или 'ФамилияИмя' первого автора
+    (без пробела, чтобы удобно было использовать в имени файла).
+    Если не получилось — 'report'.
     """
     header_text = "\n".join(p.text for p in doc.paragraphs[:5])
     header_text = re.sub(r"\^[0-9, ]+\^", " ", header_text)
+
+    # Ищем первые два слова с заглавной буквы подряд
     m = re.search(r"([А-ЯA-Z][а-яa-z]+)\s+([А-ЯA-Z][а-яa-z]+)", header_text)
-    if m:
-        surname = m.group(2)
-        surname = re.sub(r"[^А-Яа-яA-Za-z-]", "", surname)
-        if surname:
-            return surname
-    return "report"
+    if not m:
+        return "report"
+
+    w1 = re.sub(r"[^А-Яа-яA-Za-z-]", "", m.group(1))
+    w2 = re.sub(r"[^А-Яа-яA-Za-z-]", "", m.group(2))
+
+    if not (w1 and w2):
+        return "report"
+
+    # Склеиваем имя и фамилию без пробела для имени файла
+    return f"{w1}{w2}"
+
 
 # ─── АНАЛИЗ ФУНКЦИЯСЫ ─────────────────────────────────────────────
 def check_article(doc, l):
@@ -289,7 +298,7 @@ if uploaded_file:
         doc = Document(uploaded_file)
         results, full_text = check_article(doc, l)
         df = pd.DataFrame(results)
-        first_surname = extract_first_author_surname(doc)
+        first_author = extract_first_author_name_surname(doc)
 
     passed = sum(1 for r in results if r["Статус"] == "✅")
     warned  = sum(1 for r in results if r["Статус"] == "⚠️")
@@ -331,7 +340,7 @@ if uploaded_file:
     st.markdown("---")
     col_a, col_b = st.columns(2)
 
-    base_name = f"compliance_{first_surname}"
+    base_name = f"compliance_{first_author}"
 
     csv_bytes = df.to_csv(index=False).encode("utf-8-sig")
     col_a.download_button(l['btn_csv'], csv_bytes, f"{base_name}.csv", "text/csv")
