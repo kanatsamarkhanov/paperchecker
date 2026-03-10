@@ -71,4 +71,4 @@ streamlit run app.py
 ## 📬 Байланыс / Контакты
 
 Сұрақтар мен ұсыныстар үшін / По вопросам и предложениям:
-[vest_chem@enu.kz](mailto:vest_chem@enu.kz)
+[vest_chem@enu.kz](mailto:samarkhanov_kb@enu.kz)
