@@ -41,7 +41,7 @@ locales = {
         'req_fix': "### ⚠️ Требует исправления",
         'req': "требование",
         'no_file': "👆 Загрузите .docx файл, чтобы начать проверку",
-        
+
         # Критерии
         'c_vol': "Объём статьи", 'c_vol_req': "≥ 3500 слов",
         'c_ann_ru': "Аннотация (рус)", 'c_ann_req': "≤ 300 слов",
@@ -53,14 +53,14 @@ locales = {
         'c_contrib': "Вклад авторов", 'c_fund': "Финансирование", 'c_conflict': "Конфликт интересов",
         'c_refs': "Кол-во источников", 'c_refs_req': "≥ 25",
         'c_doi': "DOI в ссылках", 'c_apa': "Стиль цитирования", 'c_apa_req': "APA 7 (Автор, год)",
-        
+
         # Технические критерии
         'c_paper': "Формат бумаги", 'c_paper_req': "A4 (210x297 мм)",
         'c_margins': "Поля (Жақтаулар)", 'c_margins_req': "Обычно 2 см",
         'c_font': "Шрифт и кегль", 'c_font_req': "Times New Roman, 11/12 pt",
         'c_tables': "Кестелер (Таблицы)", 'c_tables_req': "Наличие ссылок в тексте",
         'c_images': "Рисунки (DPI)", 'c_images_req': "Мин. 300 DPI (проверьте вручную)",
-        
+
         'found': "Найдено", 'not_found': "Отсутствует", 'words': "слов",
     },
     'kz': {
@@ -84,7 +84,7 @@ locales = {
         'req_fix': "### ⚠️ Түзетуді қажет етеді",
         'req': "талап",
         'no_file': "👆 Тексеруді бастау үшін .docx файлын жүктеңіз",
-        
+
         # Критерии
         'c_vol': "Мақала көлемі", 'c_vol_req': "≥ 3500 сөз",
         'c_ann_ru': "Аңдатпа (орыс)", 'c_ann_req': "≤ 300 сөз",
@@ -96,14 +96,14 @@ locales = {
         'c_contrib': "Авторлардың үлесі", 'c_fund': "Қаржыландыру", 'c_conflict': "Мүдделер қақтығысы",
         'c_refs': "Әдебиеттер саны", 'c_refs_req': "≥ 25",
         'c_doi': "Сілтемелердегі DOI", 'c_apa': "Дәйексөз келтіру стилі", 'c_apa_req': "APA 7 (Автор, жыл)",
-        
+
         # Технические критерии
         'c_paper': "Қағаз форматы", 'c_paper_req': "A4 (210x297 мм)",
         'c_margins': "Жақтаулар (Поля)", 'c_margins_req': "Әдетте 2 см",
         'c_font': "Шрифт және өлшемі (Кегль)", 'c_font_req': "Times New Roman, 11/12 pt",
         'c_tables': "Кестелер", 'c_tables_req': "Мәтіндегі сілтемелер болуы",
         'c_images': "Суреттер (DPI)", 'c_images_req': "Мин. 300 DPI (қолмен тексеріңіз)",
-        
+
         'found': "Табылды", 'not_found': "Жоқ", 'words': "сөз",
     }
 }
@@ -114,21 +114,26 @@ l = locales[st.session_state.lang]
 dark_css = """
 <style>
 .stApp { background-color: #121212; color: #E0E0E0; }
-.stMetric { background: #1E1E1E; border: 1px solid #333; color: #FFF; padding:12px; border-radius:10px; }
-h1, h2, h3, h4, h5, h6, p, div, span { color: #E0E0E0 !important; }
-.stDataFrame { background-color: #1E1E1E !important; }
-.css-1d391kg, .css-1y4p8pa { background-color: #1E1E1E !important; } /* Sidebar & widgets */
+.stMetric { background: #1E1E1E; border: 1px solid #333; color: #FFF;
+            padding:12px; border-radius:10px; }
+h1, h2, h3, h4, h5, h6 { color: #E0E0E0 !important; }
 </style>
 """
 
 light_css = """
 <style>
-.stMetric { background:white; padding:12px; border-radius:10px; box-shadow:0 2px 6px rgba(0,0,0,0.08); }
+.stMetric {
+    background: #ffffff;
+    padding:12px;
+    border-radius:10px;
+    box-shadow:0 2px 6px rgba(0,0,0,0.08);
+}
 h1, h2, h3 { color:#1a3a5c; }
 </style>
 """
 
-st.markdown(dark_css if st.session_state.theme == 'dark' else light_css, unsafe_allow_html=True)
+st.markdown(dark_css if st.session_state.theme == 'dark' else light_css,
+            unsafe_allow_html=True)
 
 # ─── КНОПКАЛАРДЫ БАСҚАРУ БЛОГЫ (TOP RIGHT) ────────────────────────
 col1, col2, col3 = st.columns([7, 1.5, 1.5])
@@ -146,6 +151,22 @@ st.title(l['title'])
 st.caption(l['subtitle'])
 st.markdown("---")
 
+# ─── ВСПОМОГАТЕЛЬНАЯ ФУНКЦИЯ: ФАМИЛИЯ ПЕРВОГО АВТОРА ──────────────
+def extract_first_author_surname(doc: Document) -> str:
+    """Пытаемся вытащить фамилию первого автора из первых абзацев.
+    Ожидаем формат: Имя Фамилия ... или Фамилия Имя ...
+    Если не получилось — возвращаем 'report'.
+    """
+    header_text = "\n".join(p.text for p in doc.paragraphs[:5])
+    header_text = re.sub(r"\^[0-9, ]+\^", " ", header_text)
+    m = re.search(r"([А-ЯA-Z][а-яa-z]+)\s+([А-ЯA-Z][а-яa-z]+)", header_text)
+    if m:
+        surname = m.group(2)
+        surname = re.sub(r"[^А-Яа-яA-Za-z-]", "", surname)
+        if surname:
+            return surname
+    return "report"
+
 # ─── АНАЛИЗ ФУНКЦИЯСЫ ─────────────────────────────────────────────
 def check_article(doc, l):
     full_text = "\n".join([p.text for p in doc.paragraphs])
@@ -160,7 +181,8 @@ def check_article(doc, l):
     add(1, l['c_vol'], l['c_vol_req'], f"{word_count} {l['words']}", "✅" if word_count >= 3500 else "❌")
 
     # 2-4. Аннотации
-    abstract_ru = re.search(r"аннотация[:\s]+(.{50,}?)(?=ключевые|keywords|түйін)", full_text, re.IGNORECASE | re.DOTALL)
+    abstract_ru = re.search(r"аннотация[:\s]+(.{50,}?)(?=ключевые|keywords|түйін)", full_text,
+                            re.IGNORECASE | re.DOTALL)
     if abstract_ru:
         aw = len(abstract_ru.group(1).split())
         add(2, l['c_ann_ru'], l['c_ann_req'], f"{aw} {l['words']}", "✅" if aw <= 300 else "❌")
@@ -174,10 +196,12 @@ def check_article(doc, l):
     add(4, l['c_ann_en'], l['c_req_obl'], l['found'] if has_eng else l['not_found'], "✅" if has_eng else "❌")
 
     # 5. Ключевые слова
-    kw_match = re.search(r"(ключевые слова|keywords|түйінді сөздер)[:\s]+(.+?)(\n|$)", full_text, re.IGNORECASE)
+    kw_match = re.search(r"(ключевые слова|keywords|түйінді сөздер)[:\s]+(.+?)(\n|$)",
+                         full_text, re.IGNORECASE)
     if kw_match:
         kw_list = [k.strip() for k in kw_match.group(2).split(";") if k.strip()]
-        add(5, l['c_kw'], l['c_kw_req'], f"{len(kw_list)} {l['words']}", "✅" if 3 <= len(kw_list) <= 10 else "❌")
+        add(5, l['c_kw'], l['c_kw_req'], f"{len(kw_list)} {l['words']}",
+            "✅" if 3 <= len(kw_list) <= 10 else "❌")
     else:
         add(5, l['c_kw'], l['c_kw_req'], l['not_found'], "⚠️")
 
@@ -201,13 +225,15 @@ def check_article(doc, l):
         add(num, name, l['c_req_obl'], l['found'] if found else l['not_found'], "✅" if found else "❌")
 
     # 13-15. Этика
-    contrib = any(k in full_text.lower() for k in ["вклад авторов", "author contribution", "авторлардың үлесі"])
+    contrib = any(k in full_text.lower() for k in
+                  ["вклад авторов", "author contribution", "авторлардың үлесі"])
     add(13, l['c_contrib'], "CRediT", l['found'] if contrib else l['not_found'], "✅" if contrib else "❌")
 
     fund = any(k in full_text.lower() for k in ["финансирован", "funding", "қаржыландыру"])
     add(14, l['c_fund'], l['c_req_obl'], l['found'] if fund else l['not_found'], "✅" if fund else "❌")
 
-    conflict = any(k in full_text.lower() for k in ["конфликт интересов", "conflict of interest", "мүдделер қақтығысы"])
+    conflict = any(k in full_text.lower() for k in
+                   ["конфликт интересов", "conflict of interest", "мүдделер қақтығысы"])
     add(15, l['c_conflict'], l['c_req_obl'], l['found'] if conflict else l['not_found'], "✅" if conflict else "❌")
 
     # 16-18. Литература
@@ -220,34 +246,36 @@ def check_article(doc, l):
     apa_style = bool(re.search(r"\([A-ZА-Я][a-zA-Zа-яА-Я]+.*?\d{4}\)", full_text))
     add(18, l['c_apa'], l['c_apa_req'], l['found'] if apa_style else l['not_found'], "✅" if apa_style else "⚠️")
 
-    # ─── ТЕХНИЧЕСКИЕ ПРОВЕРКИ (ШРИФТ, ПОЛЯ, СУРЕТТЕР) ─────────────────
-    # 19. Формат бумаги и поля
+    # 19-20. Формат бумаги и поля
     try:
         sec = doc.sections[0]
         w_mm, h_mm = round(sec.page_width.mm), round(sec.page_height.mm)
         is_a4 = (209 <= w_mm <= 211) and (296 <= h_mm <= 298)
         add(19, l['c_paper'], l['c_paper_req'], f"{w_mm}x{h_mm} мм", "✅" if is_a4 else "❌")
-        
-        t, b, lf, rg = round(sec.top_margin.mm), round(sec.bottom_margin.mm), round(sec.left_margin.mm), round(sec.right_margin.mm)
-        add(20, l['c_margins'], l['c_margins_req'], f"Л:{lf} П:{rg} В:{t} Н:{b} мм", "✅" if lf>=20 else "⚠️")
-    except:
+
+        t, b, lf, rg = (round(sec.top_margin.mm), round(sec.bottom_margin.mm),
+                        round(sec.left_margin.mm), round(sec.right_margin.mm))
+        add(20, l['c_margins'], l['c_margins_req'],
+            f"Л:{lf} П:{rg} В:{t} Н:{b} мм", "✅" if lf >= 20 else "⚠️")
+    except Exception:
         add(19, l['c_paper'], l['c_paper_req'], "Қате / Ошибка", "⚠️")
         add(20, l['c_margins'], l['c_margins_req'], "Қате / Ошибка", "⚠️")
 
     # 21. Шрифт
     try:
         font_name = doc.styles['Normal'].font.name or "Анықталмады"
-        font_size_pt = doc.styles['Normal'].font.size.pt if doc.styles['Normal'].font.size else "Анықталмады"
+        font_size_pt = (doc.styles['Normal'].font.size.pt
+                        if doc.styles['Normal'].font.size else "Анықталмады")
         is_correct_font = ("Times New Roman" in str(font_name)) and (font_size_pt in [11.0, 12.0])
-        add(21, l['c_font'], l['c_font_req'], f"{font_name}, {font_size_pt} pt", "✅" if is_correct_font else "⚠️")
-    except:
+        add(21, l['c_font'], l['c_font_req'], f"{font_name}, {font_size_pt} pt",
+            "✅" if is_correct_font else "⚠️")
+    except Exception:
         add(21, l['c_font'], l['c_font_req'], "Қате / Ошибка", "⚠️")
 
     # 22-23. Таблицы и Рисунки
     tbl_count = len(doc.tables)
     add(22, l['c_tables'], l['c_tables_req'], f"{tbl_count} шт.", "✅" if tbl_count > 0 else "⚠️")
-    
-    # Считаем inline изображения
+
     img_count = len(doc.inline_shapes)
     add(23, l['c_images'], l['c_images_req'], f"{img_count} шт.", "⚠️" if img_count > 0 else "✅")
 
@@ -261,6 +289,7 @@ if uploaded_file:
         doc = Document(uploaded_file)
         results, full_text = check_article(doc, l)
         df = pd.DataFrame(results)
+        first_surname = extract_first_author_surname(doc)
 
     passed = sum(1 for r in results if r["Статус"] == "✅")
     warned  = sum(1 for r in results if r["Статус"] == "⚠️")
@@ -276,34 +305,41 @@ if uploaded_file:
     c4.metric(l['failed'], failed)
     c5.metric(l['score'], f"{score}%")
 
-    color = "#198754" if score >= 80 else "#ffc107" if score >= 60 else "#dc3545"
+    bar_color = "#4caf50" if score >= 80 else "#ffc107" if score >= 60 else "#f44336"
+    bg_bar = "#2b2b2b" if st.session_state.theme == 'dark' else "#e9ecef"
     st.markdown(f"""
-    <div style="background:#e9ecef;border-radius:10px;height:28px;margin:8px 0 20px 0;">
-      <div style="background:{color};width:{score}%;height:28px;border-radius:10px;
+    <div style="background:{bg_bar};border-radius:10px;height:28px;margin:8px 0 20px 0;">
+      <div style="background:{bar_color};width:{score}%;height:28px;border-radius:10px;
                   display:flex;align-items:center;justify-content:center;
                   color:white;font-weight:bold;">{score}%</div>
     </div>""", unsafe_allow_html=True)
 
     def highlight(row):
-        # Подстраиваем цвета подсветки таблиц под Dark/Light режим
         if st.session_state.theme == 'dark':
-            c = {"✅": "background-color:#0d4a22", "⚠️": "background-color:#664d03", "❌": "background-color:#5c161d"}
+            colors = {"✅": "background-color:#1b5e20",
+                      "⚠️": "background-color:#795548",
+                      "❌": "background-color:#b71c1c"}
         else:
-            c = {"✅": "background-color:#d4edda", "⚠️": "background-color:#fff3cd", "❌": "background-color:#f8d7da"}
-        return [c.get(row["Статус"], "")] * len(row)
+            colors = {"✅": "background-color:#d4edda",
+                      "⚠️": "background-color:#fff3cd",
+                      "❌": "background-color:#f8d7da"}
+        return [colors.get(row["Статус"], "")] * len(row)
 
     st.markdown(l['det_report'])
     st.dataframe(df.style.apply(highlight, axis=1), use_container_width=True, height=850)
 
     st.markdown("---")
     col_a, col_b = st.columns(2)
+
+    base_name = f"compliance_{first_surname}"
+
     csv_bytes = df.to_csv(index=False).encode("utf-8-sig")
-    col_a.download_button(l['btn_csv'], csv_bytes, "compliance_report.csv", "text/csv")
-    
+    col_a.download_button(l['btn_csv'], csv_bytes, f"{base_name}.csv", "text/csv")
+
     excel_buf = BytesIO()
     with pd.ExcelWriter(excel_buf, engine="openpyxl") as writer:
         df.to_excel(writer, index=False, sheet_name="Report")
-    col_b.download_button(l['btn_xls'], excel_buf.getvalue(), "compliance_report.xlsx",
+    col_b.download_button(l['btn_xls'], excel_buf.getvalue(), f"{base_name}.xlsx",
                           "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
     problems = [r for r in results if r["Статус"] in ("❌", "⚠️")]
