@@ -206,7 +206,7 @@ _SKIP_PATTERNS = re.compile(
     r"|секция|section|тип статьи|мақала түрі|type of the paper"
     r"|корреспонд|correspondence|copyright|citation|цитирование|дәйексөз"
     r"|received|поступила|accepted|published|academic editor|vest_chem"
-    r"|beisemb|гумилева|gumilyov|doi\\.org|http|https",
+    r"|beisemb|гумилева|gumilyov|doi\.org|http|https",
     re.IGNORECASE,
 )
 
@@ -390,19 +390,19 @@ def check_article(doc: Document, l: dict):
         l["found"] if ack else l["not_found"],
         "✅" if ack else "⚠️")
 
-    # 19. Конфликт интересов (пункт 11)
+    # 19. Конфликт интересов (нөмірге байламай)
     conflict = any(k in text_low for k in [
-    "конфликт интересов", "conflicts of interest", "мүдделер қақтығысы"])
+        "конфликт интересов", "conflicts of interest", "мүдделер қақтығысы"])
     add(19, l["c_conflict"], l["c_req_obl"],
         l["found"] if conflict else l["not_found"],
         "✅" if conflict else "❌")
 
-    # 20–22. References – нақты 12‑ші пункттен кейін
+    # 20–22. References – заголовоктан соңғы блок
     refs_block = ""
     m_refs = re.search(
-    r"(references|әдебиеттер тізімі|әдебиет тізімі|список литературы)(.*)$",
-    full_text, re.IGNORECASE | re.DOTALL
-)
+        r"(references|әдебиеттер тізімі|әдебиет тізімі|список литературы)(.*)$",
+        full_text, re.IGNORECASE | re.DOTALL
+    )
     if m_refs:
         refs_block = m_refs.group(2)
 
