@@ -390,21 +390,41 @@ def check_article(doc: Document, l: dict):
         l["found"] if ack else l["not_found"],
         "✅" if ack else "⚠️")
 
-    # 19. Конфликт интересов (нөмірге байламай)
+    # 19. Конфликт интересов (anywhere in text)
     conflict = any(k in text_low for k in [
         "конфликт интересов", "conflicts of interest", "мүдделер қақтығысы"])
     add(19, l["c_conflict"], l["c_req_obl"],
         l["found"] if conflict else l["not_found"],
         "✅" if conflict else "❌")
 
-    # 20–22. References – заголовоктан соңғы блок
+    # 20–22. References – between numbered heading and final bilingual annotations
     refs_block = ""
-    m_refs = re.search(
-        r"(references|әдебиеттер тізімі|әдебиет тізімі|список литературы)(.*)$",
-        full_text, re.IGNORECASE | re.DOTALL
+    # start at 10./11./12. + references / әдебиеттер / список литературы
+    m_start = re.search(
+        r"(1[0-2]\.\s*references|1[0-2]\.\s*әдебиеттер тізімі|1[0-2]\.\s*әдебиет тізімі|1[0-2]\.\s*список литературы)",
+        full_text,
+        re.IGNORECASE,
     )
-    if m_refs:
-        refs_block = m_refs.group(2)
+    if m_start:
+        after = full_text[m_start.end():]
+        # end before Kazakh/Russian back translations
+        m_end = re.search(
+            r"(Мақаланың аты|Название статьи|The following information must be given in Kazakh|The following information must be given in Russian)",
+            after,
+            re.IGNORECASE,
+        )
+        if m_end:
+            refs_block = after[:m_end.start()]
+        else:
+            refs_block = after
+    else:
+        # fallback: any references heading
+        m_refs = re.search(
+            r"(references|әдебиеттер тізімі|әдебиет тізімі|список литературы)(.*)$",
+            full_text, re.IGNORECASE | re.DOTALL
+        )
+        if m_refs:
+            refs_block = m_refs.group(2)
 
     total_refs = len(re.findall(r"(?m)^\s*\d+\.\s+\S", refs_block))
     add(20, l["c_refs"], l["c_refs_req"],
