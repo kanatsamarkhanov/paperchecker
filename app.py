@@ -162,9 +162,21 @@ l = locales[st.session_state.lang]
 # ─── THEME CSS ─────────────────────────────────────────────────────
 dark_css = """
 <style>
-.stApp{background-color:#121212;color:#E0E0E0;}
-.stMetric{background:#1E1E1E;border:1px solid #333;color:#FFF;padding:12px;border-radius:10px;}
-h1,h2,h3,h4,h5,h6{color:#E0E0E0!important;}
+.stApp{background-color:#0d1117;color:#e6edf3;}
+.stMetric{
+background:#161b22;
+border:1px solid #30363d;
+color:#e6edf3;
+padding:12px;
+border-radius:10px;
+}
+
+h1,h2,h3,h4,h5,h6{color:#e6edf3!important;}
+
+div[data-testid="stDataFrame"]{
+background:#161b22;
+}
+
 </style>
 """
 light_css = """
@@ -387,9 +399,11 @@ def check_article(doc: Document, l: dict):
             r"conflict(s)? of interest",
             r"мүдделер қақтығысы",
         ]
-    
-        conflict = any(re.search(p, text_low) for p in conflict_patterns)
-    
+        
+        conflict = any(
+            re.search(p, full_text, re.IGNORECASE)
+            for p in conflict_patterns)
+        
         add(
             19,
             l["c_conflict"],
@@ -405,53 +419,70 @@ def check_article(doc: Document, l: dict):
             r"references",
             r"әдебиет(тер)? тізімі",
         ]
-    
+        
+        ann_patterns = [
+            r"\n\s*аннотация",
+            r"\n\s*abstract",
+            r"\n\s*аңдатпа",
+        ]
+        
         refs_match = None
         for p in refs_patterns:
-            refs_match = re.search(p, text_low)
-            if refs_match:
+            m = re.search(p, text_low)
+            if m:
+                refs_match = m
                 break
-    
+        
         if refs_match:
-    
-            refs_start = refs_match.start()
-            refs_text = full_text[refs_start:]
-    
-            # ищем строки похожие на источники
+        
+            start = refs_match.end()
+        
+            # ищем конец блока (начало аннотаций)
+            end = len(full_text)
+        
+            for p in ann_patterns:
+                m = re.search(p, text_low[start:])
+                if m:
+                    end = start + m.start()
+                    break
+        
+            refs_text = full_text[start:end]
+        
+            # поиск нумерованных ссылок
             ref_lines = re.findall(
                 r"\n\s*(\d+[\.\)]|\[\d+\])\s",
                 refs_text
             )
-    
-            # если нумерации нет — пробуем считать по строкам
+        
+            # если нумерации нет — считаем длинные строки
             if len(ref_lines) == 0:
+        
                 raw_lines = refs_text.split("\n")
+        
                 ref_lines = [
-                    line for line in raw_lines
-                    if len(line.strip()) > 40
-                    and any(x in line for x in ["doi", ".", "(", ")"])
+                    l for l in raw_lines
+                    if len(l.strip()) > 40
                 ]
-    
+        
             ref_count = len(ref_lines)
-    
+        
             add(
                 20,
                 "Список литературы / References",
                 "≥10 источников",
-                f"{ref_count} источников",
+                f"{ref_count}",
                 "✅" if ref_count >= 10 else "⚠️",
             )
-    
+        
         else:
-    
+        
             add(
                 20,
                 "Список литературы / References",
-                "обязательно",
+                l["c_req_obl"],
                 l["not_found"],
                 "❌",
             )
-
     # 23–25. Формат, поля, шрифт
     try:
         sec = doc.sections[0]
