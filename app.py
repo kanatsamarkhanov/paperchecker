@@ -383,14 +383,16 @@ def check_article(doc: Document, l: dict):
 
     # 19. Конфликт интересов
     m_conf = re.search(
-        r"^.{0,12}конфликты[^\n]*интересов[^\n]*$|^.{0,12}conflict[^\n]*interests[^\n]*$|мүдделер қақтығысы",
+        r"конфликт[а-яё\s]*интересов|conflict\s+of\s+interest|мүдделер\s+қақтығысы",
         text_low,
-        re.IGNORECASE | re.MULTILINE,
+        re.IGNORECASE,
     )
     conflict = bool(m_conf)
+    
     add(19, l["c_conflict"], l["c_req_obl"],
         l["found"] if conflict else l["not_found"],
         "✅" if conflict else "❌")
+
 
     # 20–22. (References checks removed)
 
