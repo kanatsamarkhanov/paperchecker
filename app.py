@@ -383,7 +383,7 @@ def check_article(doc: Document, l: dict):
 
     # 19. Конфликт интересов
     m_conf = re.search(
-        r"^.{0,10}конфликты[^\n]*интересов[^\n]*$|^.{0,10}conflict[^\n]*interests[^\n]*$|мүдделер қақтығысы",
+        r"^.{0,12}конфликты[^\n]*интересов[^\n]*$|^.{0,12}conflict[^\n]*interests[^\n]*$|мүдделер қақтығысы",
         text_low,
         re.IGNORECASE | re.MULTILINE,
     )
