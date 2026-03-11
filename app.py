@@ -382,21 +382,21 @@ def check_article(doc: Document, l: dict):
         "✅" if ack else "⚠️")
 
     # 19. Конфликт интересов — без нумерации, максимально просто
-    conflict = any(
-        k in text_low
-        for k in [
-            "Конфликты интересов",
-            "Конфликт интересов",
-            "Конфликта интересов",
-            "Conflicts of interest",
-            "Conflict of interest",
-            "Мүдделер қақтығысы",
-        ]
-    )
+    # conflict = any(
+    #     k in text_low
+    #     for k in [
+    #         "Конфликты интересов",
+    #         "Конфликт интересов",
+    #         "Конфликта интересов",
+    #         "Conflicts of interest",
+    #         "Conflict of interest",
+    #         "Мүдделер қақтығысы",
+    #     ]
+    # )
     
-    add(19, l["c_conflict"], l["c_req_obl"],
-        l["found"] if conflict else l["not_found"],
-        "✅" if conflict else "❌")
+    # add(19, l["c_conflict"], l["c_req_obl"],
+    #     l["found"] if conflict else l["not_found"],
+    #     "✅" if conflict else "❌")
 
 
 
