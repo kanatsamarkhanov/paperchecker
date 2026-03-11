@@ -68,7 +68,7 @@ locales = {
         "c_authinfo": "§8. Информация об авторе",
         "c_fund": "§9. Финансирование",
         "c_ack": "§10. Благодарности",
-        # "c_conflict": "§11. Конфликты интересов",
+        "c_conflict": "§11. Конфликты интересов",
         # refs‑критерийлерді UI‑да қалдырсақ болады, бірақ есептелмейді
         "c_paper": "Формат бумаги",
         "c_paper_req": "A4 (210x297 мм)",
@@ -136,7 +136,7 @@ locales = {
         "c_authinfo": "§8. Автор туралы ақпарат",
         "c_fund": "§9. Қаржыландыру",
         "c_ack": "§10. Алғыстар",
-        # "c_conflict": "§11. Мүдделер қақтығысы",
+        "c_conflict": "§11. Мүдделер қақтығысы",
         "c_paper": "Қағаз форматы",
         "c_paper_req": "A4 (210x297 мм)",
         "c_margins": "Жақтаулар",
@@ -381,23 +381,22 @@ def check_article(doc: Document, l: dict):
         l["found"] if ack else l["not_found"],
         "✅" if ack else "⚠️")
 
-    # 19. Конфликт интересов — без нумерации, максимально просто
-    # conflict = any(
-    #     k in text_low
-    #     for k in [
-    #         "Конфликты интересов",
-    #         "Конфликт интересов",
-    #         "Конфликта интересов",
-    #         "Conflicts of interest",
-    #         "Conflict of interest",
-    #         "Мүдделер қақтығысы",
-    #     ]
-    # )
-    
-    # add(19, l["c_conflict"], l["c_req_obl"],
-    #     l["found"] if conflict else l["not_found"],
-    #     "✅" if conflict else "❌")
+    # 19. Конфликт интересов (RU/KZ/EN, регистр не важен)
+    conflict = any(
+        key in text_low
+        for key in [
+            "конфликт интересов",      # ед. число
+            "конфликты интересов",     # мн. число
+            "конфликта интересов",
+            "conflict of interest",
+            "conflicts of interest",
+            "мүдделер қақтығысы",
+        ]
+    )
 
+    add(19, l["c_conflict"], l["c_req_obl"],
+        l["found"] if conflict else l["not_found"],
+        "✅" if conflict else "❌")
 
 
     # 20–22. (References checks removed)
