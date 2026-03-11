@@ -382,18 +382,15 @@ def check_article(doc: Document, l: dict):
         "✅" if ack else "⚠️")
 
     # 19. Конфликт интересов
-    conflict_keys = [
-        "конфликт интересов",
-        "конфликты интересов",
-        "мүдделер қақтығысы",
-        "conflict of interest",
-        "conflicts of interest",
-    ]
-    conflict = any(k in text_low for k in conflict_keys)
+    m_conf = re.search(
+        r"^.{0,10}конфликт[^\n]*интерес[^\n]*$|^.{0,10}conflict[^\n]*interest[^\n]*$|мүдделер қақтығысы",
+        text_low,
+        re.IGNORECASE | re.MULTILINE,
+    )
+    conflict = bool(m_conf)
     add(19, l["c_conflict"], l["c_req_obl"],
         l["found"] if conflict else l["not_found"],
         "✅" if conflict else "❌")
-
 
     # 20–22. (References checks removed)
 
