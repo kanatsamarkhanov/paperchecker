@@ -489,6 +489,8 @@ if uploaded_file:
         doc = Document(uploaded_file)
         results, full_text, author_str, main_lang = check_article(doc, l)
         df = pd.DataFrame(results)
+        st.write([p.text for p in doc.paragraphs if "конф" in p.text.lower()])
+
 
     passed = sum(1 for r in results if r["Статус"] == "✅")
     warned = sum(1 for r in results if r["Статус"] == "⚠️")
