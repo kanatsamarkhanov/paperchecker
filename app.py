@@ -381,25 +381,76 @@ def check_article(doc: Document, l: dict):
         l["found"] if ack else l["not_found"],
         "✅" if ack else "⚠️")
 
-    # 19. Конфликт интересов (RU/KZ/EN, регистр не важен)
-    conflict = any(
-        key in text_low
-        for key in [
-            "конфликт интересов",      # ед. число
-            "конфликты интересов",     # мн. число
-            "конфликта интересов",
-            "conflict of interest",
-            "conflicts of interest",
-            "мүдделер қақтығысы",
+        # 20. Конфликт интересов (RU/KZ/EN)
+        conflict_patterns = [
+            r"конфликт(ы)? интерес(а|ов)",
+            r"conflict(s)? of interest",
+            r"мүдделер қақтығысы",
         ]
-    )
-
-    add(19, l["c_conflict"], l["c_req_obl"],
-        l["found"] if conflict else l["not_found"],
-        "✅" if conflict else "❌")
-
-
-    # 20–22. (References checks removed)
+    
+        conflict = any(re.search(p, text_low) for p in conflict_patterns)
+    
+        add(
+            19,
+            l["c_conflict"],
+            l["c_req_obl"],
+            l["found"] if conflict else l["not_found"],
+            "✅" if conflict else "❌",
+        )
+    
+    
+        # 21. Список литературы / References / Әдебиеттер
+        refs_patterns = [
+            r"список литературы",
+            r"references",
+            r"әдебиет(тер)? тізімі",
+        ]
+    
+        refs_match = None
+        for p in refs_patterns:
+            refs_match = re.search(p, text_low)
+            if refs_match:
+                break
+    
+        if refs_match:
+    
+            refs_start = refs_match.start()
+            refs_text = full_text[refs_start:]
+    
+            # ищем строки похожие на источники
+            ref_lines = re.findall(
+                r"\n\s*(\d+[\.\)]|\[\d+\])\s",
+                refs_text
+            )
+    
+            # если нумерации нет — пробуем считать по строкам
+            if len(ref_lines) == 0:
+                raw_lines = refs_text.split("\n")
+                ref_lines = [
+                    line for line in raw_lines
+                    if len(line.strip()) > 40
+                    and any(x in line for x in ["doi", ".", "(", ")"])
+                ]
+    
+            ref_count = len(ref_lines)
+    
+            add(
+                20,
+                "Список литературы / References",
+                "≥10 источников",
+                f"{ref_count} источников",
+                "✅" if ref_count >= 10 else "⚠️",
+            )
+    
+        else:
+    
+            add(
+                20,
+                "Список литературы / References",
+                "обязательно",
+                l["not_found"],
+                "❌",
+            )
 
     # 23–25. Формат, поля, шрифт
     try:
