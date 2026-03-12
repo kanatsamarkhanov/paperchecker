@@ -1,5 +1,6 @@
 import streamlit as st
 from docx import Document
+from docx.shared import Pt
 import re
 import pandas as pd
 from io import BytesIO
@@ -228,79 +229,90 @@ _SKIP_PATTERNS = re.compile(
 
 def extract_author_and_lang(doc: Document):
 
-    # берём только первые строки статьи
-    header_lines = [
-        p.text.strip()
-        for p in doc.paragraphs[:20]
-        if p.text.strip()
-    ]
+    title = None
+    author_str = None
 
-    header_text = "\n".join(header_lines)
-    header_low = header_text.lower()
+    header_pars = doc.paragraphs[:10]
 
-    # ── определение языка статьи по шапке ──
-    if any(k in header_low for k in [
-        "кіріспе", "қорытынды", "мақала", "нәтижелер", "аңдатпа"
+    # ───────── TITLE (14 pt bold) ─────────
+    for p in header_pars:
+
+        text = p.text.strip()
+        if not text:
+            continue
+
+        for r in p.runs:
+
+            if r.font.bold and r.font.size:
+
+                size = r.font.size.pt
+
+                if 13.5 <= size <= 14.5:
+                    title = text
+                    break
+
+        if title:
+            break
+
+    # ───────── AUTHORS (12 pt bold) ─────────
+    for p in header_pars:
+
+        text = p.text.strip()
+        if not text:
+            continue
+
+        for r in p.runs:
+
+            if r.font.bold and r.font.size:
+
+                size = r.font.size.pt
+
+                if 11.5 <= size <= 12.5:
+
+                    cleaned = re.sub(r"\d+[\*,]?", "", text)
+                    cleaned = re.sub(
+                        r"\s+(және|и|and)\s+",
+                        ", ",
+                        cleaned,
+                        flags=re.IGNORECASE
+                    )
+
+                    parts = [
+                        p.strip()
+                        for p in cleaned.split(",")
+                        if p.strip()
+                    ]
+
+                    if parts:
+                        author_str = parts[0]
+
+                    break
+
+        if author_str:
+            break
+
+    # ───────── FALLBACK ─────────
+    if not author_str:
+        author_str = "to be defined"
+
+    if not title:
+        title = ""
+
+    # ───────── LANGUAGE DETECTION ─────────
+    title_low = title.lower()
+
+    if any(k in title_low for k in [
+        "зерттеу", "талдау", "бағалау"
     ]):
         main_lang = "kz"
 
-    elif any(k in header_low for k in [
-        "introduction", "results", "discussion", "abstract"
+    elif any(k in title_low for k in [
+        "analysis", "assessment", "study"
     ]):
         main_lang = "en"
 
     else:
         main_lang = "ru"
-
-    # ── поиск первого автора ──
-    author_str = ""
-
-    for line in header_lines:
-
-        if _SKIP_PATTERNS.search(line):
-            continue
-
-        # пропускаем строки с цифрами/индексами
-        if re.match(r"^[\d\s\*©\^]", line):
-            continue
-
-        words = line.split()
-
-        # слишком длинные строки — скорее всего заголовок
-        if len(words) > 10:
-            continue
-
-        # очистка от индексов
-        cleaned = re.sub(r"\d+[\*,]?", "", line).strip()
-        cleaned = re.sub(r"\^[^|]*\^", "", cleaned).strip()
-
-        # разделение авторов
-        cleaned = re.sub(
-            r"\s+(және|и|and)\s+",
-            ", ",
-            cleaned,
-            flags=re.IGNORECASE
-        )
-
-        parts = [p.strip() for p in cleaned.split(",") if p.strip()]
-
-        if not parts:
-            continue
-
-        first = parts[0]
-
-        name_words = first.split()
-
-        # проверка что это имя
-        if len(name_words) >= 2 and re.match(
-            r"[А-ЯЁA-ZҒҚҢӨҰҮІӘ]",
-            name_words[0]
-        ):
-            author_str = first
-            break
-
-    if not author_str:
-        author_str = "Анықталмады / Не найдено"
 
     return author_str, main_lang
 
