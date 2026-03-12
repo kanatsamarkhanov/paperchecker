@@ -43,7 +43,7 @@ locales = {
     "c_margins":"Поля","c_margins_req":"Все поля 20 мм",
     "c_font":"Шрифт и кегль","c_font_req":"Times New Roman, 12 pt",
     "c_tables":"Таблицы","c_tables_req":"Должны быть в тексте",
-    "c_images":"Рисунки","c_images_req":"Мин. 300 DPI",
+    "c_images":"Рисунки","c_images_req":"600 DPI, TIFF/JPEG/PNG",
     "c_multi_ann":"Многоязычные аннотации","c_multi_ann_req":"Ещё 2 аннотации на других языках",
     "c_refs_style":"§21б. Стиль ссылок","c_refs_style_req":"APA / Vancouver / ГОСТ",
     "refs_apa":"APA","refs_van":"Vancouver","refs_gost":"ГОСТ","refs_unclear":"Не определён",
@@ -83,7 +83,7 @@ locales = {
     "c_margins":"Жақтаулар","c_margins_req":"Барлық жақтаулар 20 мм",
     "c_font":"Шрифт және кегль","c_font_req":"Times New Roman, 12 pt",
     "c_tables":"Кестелер","c_tables_req":"Мәтінде болуы керек",
-    "c_images":"Суреттер","c_images_req":"Мин. 300 DPI",
+    "c_images":"Суреттер","c_images_req":"600 DPI, TIFF/JPEG/PNG",
     "c_multi_ann":"Көптілді аңдатпалар","c_multi_ann_req":"Басқа 2 тілде аңдатпа болуы керек",
     "c_refs_style":"§21б. Сілтеме стилі","c_refs_style_req":"APA / Vancouver / МЕСТ",
     "refs_apa":"APA","refs_van":"Vancouver","refs_gost":"МЕСТ","refs_unclear":"Анықталмады",
@@ -123,7 +123,7 @@ locales = {
     "c_margins":"Margins","c_margins_req":"All margins 20 mm",
     "c_font":"Font & size","c_font_req":"Times New Roman, 12 pt",
     "c_tables":"Tables","c_tables_req":"Must be in text",
-    "c_images":"Figures","c_images_req":"Min. 300 DPI",
+    "c_images":"Figures","c_images_req":"600 DPI, TIFF/JPEG/PNG",
     "c_multi_ann":"Multilingual abstracts","c_multi_ann_req":"2 more abstracts in other languages",
     "c_refs_style":"§21b. Reference style","c_refs_style_req":"APA / Vancouver / GOST",
     "refs_apa":"APA","refs_van":"Vancouver","refs_gost":"GOST","refs_unclear":"Unclear",
@@ -275,6 +275,9 @@ def detect_refs_style(refs_text, l):
     if van_total == best: return l["refs_van"], doi_count, True
     return l["refs_gost"], doi_count, True
 
+_ALLOWED_FORMATS = {"TIFF", "JPEG", "PNG"}
+_MIN_DPI = 600
+
 def extract_image_info(doc, l):
     rows, EMU = [], 914400
     for i, shape in enumerate(doc.inline_shapes):
@@ -292,11 +295,19 @@ def extract_image_info(doc, l):
             dpi_calc = f"{dw}x{dh}" if dw else "-"
             emb = img.info.get("dpi")
             dpi_emb = f"{round(emb[0])}x{round(emb[1])}" if emb else "-"
-            ok = isinstance(dw, int) and dw >= 300
+            fmt = (img.format or "?").upper()
+            fmt_ok  = fmt in _ALLOWED_FORMATS
+            dpi_ok  = isinstance(dw, int) and dw >= _MIN_DPI
+            if fmt_ok and dpi_ok:
+                status = "✅"
+            elif not fmt_ok and not dpi_ok:
+                status = "❌"   # both wrong
+            else:
+                status = "⚠️"   # one issue
             rows.append({l["img_num"]: i+1, l["img_pixels"]: f"{px_w}x{px_h}",
                          l["img_size_mm"]: size_mm, l["img_dpi_calc"]: dpi_calc,
-                         l["img_dpi_emb"]: dpi_emb, l["img_format"]: img.format or "?",
-                         l["img_status"]: "✅" if ok else "❌"})
+                         l["img_dpi_emb"]: dpi_emb, l["img_format"]: fmt,
+                         l["img_status"]: status})
         except Exception:
             rows.append({l["img_num"]: i+1, l["img_pixels"]: "-", l["img_size_mm"]: size_mm,
                          l["img_dpi_calc"]: "-", l["img_dpi_emb"]: "-",
