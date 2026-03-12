@@ -258,15 +258,15 @@ _ANN_END = r"(?=ключевые\s+слова|keywords|түйінді\s+сөзд
 
 _ANN_PATTERNS = {
     "ru": re.compile(
-        r"аннотация\s*[:\—\-]?\s*(.{30,}?)" + _ANN_END,
+        r"аннотац[ия][\s:–-]*(.{30,}?)" + _ANN_END,
         re.IGNORECASE | re.DOTALL,
     ),
     "kz": re.compile(
-        r"аңдатпа\s*[:\—\-]?\s*(.{30,}?)" + _ANN_END,
+        r"аңдатпа[\s:–-]*(.{30,}?)" + _ANN_END,
         re.IGNORECASE | re.DOTALL,
     ),
     "en": re.compile(
-        r"\babstract\b\s*[:\—\-]?\s*(.{30,}?)" + _ANN_END,
+        r"[AaAА][bв][sс][tт][rр][aа][cс][tт][\s:–-]*(.{30,}?)" + _ANN_END,
         re.IGNORECASE | re.DOTALL,
     ),
 }
