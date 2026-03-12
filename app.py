@@ -6,7 +6,7 @@ import re
 import pandas as pd
 from io import BytesIO
 
-st.set_page_config(page_title="Мақала дайындығын тексеру / Проверка готовности статьи", page_icon="📋", layout="wide")
+st.set_page_config(page_title="Чекер статьи / Мақаланы тексеру", page_icon="📋", layout="wide")
 
 if "lang" not in st.session_state: st.session_state.lang = "kz"
 if "theme" not in st.session_state: st.session_state.theme = "light"
@@ -134,10 +134,54 @@ section[data-testid='stSidebar'] { background-color: #0d1b2e !important; }
     border: 1px solid #2ea043 !important; border-radius: 6px !important;
 }
 [data-testid='stDownloadButton'] > button:hover { background-color: #2ea043 !important; }
+/* ── File uploader container ── */
 [data-testid='stFileUploader'] {
-    background-color: #0f2340 !important; border: 1px dashed #1e3a5f !important; border-radius: 6px !important;
+    background-color: #0f2340 !important;
+    border-radius: 8px !important;
 }
-[data-testid='stFileUploader'] * { color: #c9d8ee !important; }
+/* ── Drop zone ── */
+[data-testid='stFileUploaderDropzone'] {
+    background-color: #0f2340 !important;
+    border: 2px dashed #1e3a5f !important;
+    border-radius: 8px !important;
+    padding: 24px 16px !important;
+    transition: border-color 0.2s, background-color 0.2s !important;
+}
+[data-testid='stFileUploaderDropzone']:hover {
+    background-color: #112850 !important;
+    border-color: #2f5f9e !important;
+}
+/* ── All text inside uploader ── */
+[data-testid='stFileUploader'] *,
+[data-testid='stFileUploaderDropzone'] * { color: #c9d8ee !important; }
+/* ── "Browse files" button ── */
+[data-testid='stFileUploaderDropzone'] button {
+    background-color: #1e3a5f !important;
+    color: #c9d8ee !important;
+    border: 1px solid #2f5f9e !important;
+    border-radius: 6px !important;
+    padding: 5px 16px !important;
+    font-size: 13px !important;
+    font-weight: 500 !important;
+    transition: background-color 0.15s, border-color 0.15s !important;
+}
+[data-testid='stFileUploaderDropzone'] button:hover {
+    background-color: #2f5f9e !important;
+    border-color: #58a6ff !important;
+    color: #e2edf7 !important;
+}
+/* ── uploaded file chip ── */
+[data-testid='stFileUploaderFile'] {
+    background-color: #112240 !important;
+    border: 1px solid #1e3a5f !important;
+    border-radius: 6px !important;
+}
+[data-testid='stFileUploaderDeleteBtn'] button {
+    color: #7b96b8 !important;
+}
+[data-testid='stFileUploaderDeleteBtn'] button:hover {
+    color: #f85149 !important;
+}
 [data-testid='stDataFrame'],.stDataFrame iframe { border: 1px solid #1e3a5f !important; border-radius: 6px !important; }
 [data-testid='stAlert'] {
     background-color: #0f2340 !important; border: 1px solid #1f6feb !important;
