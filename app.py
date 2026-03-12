@@ -6,7 +6,7 @@ import re
 import pandas as pd
 from io import BytesIO
 
-st.set_page_config(page_title="Мақала дайындығын тексеру / Проверка готовности статьи", page_icon="📋", layout="wide")
+st.set_page_config(page_title="Чекер статьи / Мақаланы тексеру", page_icon="📋", layout="wide")
 
 if "lang" not in st.session_state: st.session_state.lang = "kz"
 if "theme" not in st.session_state: st.session_state.theme = "light"
@@ -47,6 +47,7 @@ locales = {
         "c_tables": "Таблицы", "c_tables_req": "Должны быть в тексте",
         "c_images": "Рисунки", "c_images_req": "Мин. 300 DPI",
         "c_multi_ann": "Многоязычные аннотации", "c_multi_ann_req": "Ещё 2 аннотации на других языках",
+        "img_see_table": "см. таблицу ниже",
         "found": "Найдено", "not_found": "Отсутствует", "words": "слов",
         "f_author": "Канат Самарханов / Kanat Samarkhanov", "f_license": "Лицензия",
         "f_univ": "ЕНУ им. Л.Н. Гумилева — Кафедра физической и экономической географии",
@@ -86,6 +87,7 @@ locales = {
         "c_tables": "Кестелер", "c_tables_req": "Мәтінде болуы керек",
         "c_images": "Суреттер", "c_images_req": "Мин. 300 DPI",
         "c_multi_ann": "Көптілді аңдатпалар", "c_multi_ann_req": "Басқа 2 тілде аңдатпа болуы керек",
+        "img_see_table": "төмендегі кестені қараңыз",
         "found": "Табылды", "not_found": "Жоқ", "words": "сөз",
         "f_author": "Канат Самарханов / Kanat Samarkhanov", "f_license": "Лицензия",
         "f_univ": "Л.Н. Гумилев атындағы ЕҰУ — Физикалық және экономикалық география кафедрасы",
@@ -429,7 +431,7 @@ def check_article(doc, l):
     add(24, l["c_tables"], l["c_tables_req"], f"{tc} шт.", "✅" if tc > 0 else "⚠️")
 
     ic = len(doc.inline_shapes)
-    msg = f"{ic} шт. — см. таблицу ниже" if ic > 0 else l["not_found"]
+    msg = f"{ic} шт. — {l['img_see_table']}" if ic > 0 else l["not_found"]
     add(25, l["c_images"], l["c_images_req"], msg, "⚠️" if ic > 0 else "✅")
 
     ok_multi = (has_kaz_ann and has_eng_ann) if main_lang == "ru" else \
@@ -491,16 +493,16 @@ if uploaded_file:
 
     def highlight(row):
         dk = {
-            "✅": "background-color:#0d2818;color:#56d364;font-weight:500",
-            "⚠️": "background-color:#271c00;color:#e3b341;font-weight:500",
-            "❌": "background-color:#2d0f0f;color:#f85149;font-weight:500",
+            "✅": "background-color:#163d26;color:#56d364;font-weight:500",
+            "⚠️": "background-color:#3d2b00;color:#e3b341;font-weight:500",
+            "❌": "background-color:#4a1818;color:#f85149;font-weight:500",
         }
         lt = {
             "✅": "background-color:#dafbe1;color:#1a7f37;font-weight:500",
             "⚠️": "background-color:#fff8c5;color:#7d4e00;font-weight:500",
             "❌": "background-color:#ffebe9;color:#cf222e;font-weight:500",
         }
-        base_dk = "background-color:#0d1f38;color:#c9d8ee"
+        base_dk = "background-color:#162d4a;color:#c9d8ee"
         base_lt = "background-color:#ffffff;color:#1f2328"
         s = dk if st.session_state.theme == "dark" else lt
         base = base_dk if st.session_state.theme == "dark" else base_lt
@@ -521,16 +523,16 @@ if uploaded_file:
         scol = l["img_status"]
         def hl_img(row):
             dk = {
-                "✅": "background-color:#0d2818;color:#56d364;font-weight:500",
-                "❌": "background-color:#2d0f0f;color:#f85149;font-weight:500",
-                "⚠️": "background-color:#271c00;color:#e3b341;font-weight:500",
+                "✅": "background-color:#163d26;color:#56d364;font-weight:500",
+                "❌": "background-color:#4a1818;color:#f85149;font-weight:500",
+                "⚠️": "background-color:#3d2b00;color:#e3b341;font-weight:500",
             }
             lt = {
                 "✅": "background-color:#dafbe1;color:#1a7f37;font-weight:500",
                 "❌": "background-color:#ffebe9;color:#cf222e;font-weight:500",
                 "⚠️": "background-color:#fff8c5;color:#7d4e00;font-weight:500",
             }
-            base_dk = "background-color:#0d1f38;color:#c9d8ee"
+            base_dk = "background-color:#162d4a;color:#c9d8ee"
             base_lt = "background-color:#ffffff;color:#1f2328"
             s = dk if st.session_state.theme == "dark" else lt
             base = base_dk if st.session_state.theme == "dark" else base_lt
