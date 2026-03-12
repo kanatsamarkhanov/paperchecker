@@ -257,11 +257,16 @@ def has_conflict_section(doc, full_text):
 
 def detect_refs_style(refs_text, l):
     doi_count = len(re.findall(r"doi\.org|https?://doi", refs_text, re.IGNORECASE))
-    apa_hits  = len(re.findall(r"\(\d{4}[a-z]?\)\.", refs_text))
-    van_hits  = len(re.findall(r"^\s*(\[\d+\]|\d+\.)\s", refs_text, re.MULTILINE))
-    gost_hits = len(re.findall(r"[А-ЯA-Z]\.[А-ЯA-Z]\.\s+[А-ЯA-Z][а-яa-z]", refs_text))
-    best = max(apa_hits, van_hits, gost_hits)
-    if best < 2:
+    # APA: год в скобках (2023) или (2023a) — точка/запятая необязательна
+    apa_hits  = len(re.findall(r"\(\d{4}[a-z]?\)[.,)]?", refs_text))
+    # Vancouver: [1] или 1. в начале строки
+    van_hits  = len(re.findall(r"^\s*(\[\d+\]|\d+\.\s)", refs_text, re.MULTILINE))
+    # ГОСТ: Фамилия И.О. (фамилия → инициалы, кириллица и латиница)
+    gost_hits = len(re.findall(
+        r"[А-ЯЁA-Z][а-яёa-z]+,?\s+[А-ЯЁA-Z]\.[А-ЯЁA-Z]\.",
+        refs_text))
+    best = max(apa_hits, van_hits, gost_hits, default=0)
+    if best < 1:
         return l["refs_unclear"], doi_count, False
     if apa_hits == best:  return l["refs_apa"],  doi_count, True
     if van_hits == best:  return l["refs_van"],  doi_count, True
