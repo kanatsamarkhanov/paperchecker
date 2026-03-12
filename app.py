@@ -482,14 +482,21 @@ def check_article(doc, l):
     return results, full_text, title, main_lang
 
 
-def build_docx_report(results, l, total, passed, warned, failed, score):
-    buf = BytesIO(); d = Document()
+def build_docx_report(results, l, total, passed, warned, failed, score, img_rows=None):
+    buf = BytesIO()
+    d = Document()
+
+    # Summary
     d.add_heading(l["res_title"], level=1)
     p = d.add_paragraph()
     p.add_run(f"{l['total']}: {total},  ").bold = True
-    p.add_run(f"{l['passed']}: {passed},  {l['warned']}: {warned},  "
-              f"{l['failed']}: {failed},  {l['score']}: {score}%")
+    p.add_run(
+        f"{l['passed']}: {passed},  {l['warned']}: {warned},  "
+        f"{l['failed']}: {failed},  {l['score']}: {score}%"
+    )
     d.add_paragraph("")
+
+    # Main criteria table
     tbl = d.add_table(rows=1, cols=5)
     for i, h in enumerate(["#", "Criterion", "Requirement", "Found", "Status"]):
         tbl.rows[0].cells[i].text = h
@@ -497,7 +504,28 @@ def build_docx_report(results, l, total, passed, warned, failed, score):
         row = tbl.add_row().cells
         for i, k in enumerate(["№", "Критерий", "Требование", "Найдено", "Статус"]):
             row[i].text = str(r.get(k, ""))
-    d.save(buf); buf.seek(0); return buf.getvalue()
+
+    # Optional image table
+    if img_rows:
+        d.add_page_break()
+        d.add_heading(l["img_report"], level=2)
+        cols = [
+            l["img_num"], l["img_pixels"], l["img_size_mm"],
+            l["img_dpi_calc"], l["img_dpi_emb"], l["img_dpi_real"],
+            l["img_format"], l["img_status"],
+        ]
+        t2 = d.add_table(rows=1, cols=len(cols))
+        for i, h in enumerate(cols):
+            t2.rows[0].cells[i].text = h
+        for row_data in img_rows:
+            row = t2.add_row().cells
+            for i, key in enumerate(cols):
+                row[i].text = str(row_data.get(key, ""))
+
+    d.save(buf)
+    buf.seek(0)
+    return buf.getvalue()
+
 
 _ST   = {"✅": "background-color:#dafbe1;color:#1a7f37;font-weight:500",
          "⚠️": "background-color:#fff8c5;color:#7d4e00;font-weight:500",
@@ -574,10 +602,12 @@ if uploaded_file:
         if img_rows: pd.DataFrame(img_rows).to_excel(w, index=False, sheet_name="Images")
     cb.download_button(l["btn_xls"], xb.getvalue(), f"{bn}.xlsx",
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-    cc.download_button(l["btn_docx"],
-        build_docx_report(results, l, total, passed, warned, failed, score),
-        f"{bn}.docx",
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+    cc.download_button(
+      l["btn_docx"],
+      build_docx_report(results, l, total, passed, warned, failed, score, img_rows),
+      f"{bn}.docx",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    )
 
     problems = [r for r in results if r["Статус"] in ("❌", "⚠️")]
     if problems:
