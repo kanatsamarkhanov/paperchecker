@@ -240,6 +240,21 @@ def extract_image_info(doc, l):
                          l["img_format"]: "-", l["img_status"]: "⚠️"})
     return rows
 
+def detect_author_count(doc, orcid_count):
+    """
+    Estimate number of authors.
+    Priority: ORCID count → comma-split of author line (paragraphs 4-9).
+    """
+    if orcid_count >= 1:
+        return orcid_count
+    non_empty = [p.text.strip() for p in doc.paragraphs if p.text.strip()]
+    for para in non_empty[3:10]:
+        parts = [x.strip() for x in para.split(",") if x.strip()]
+        # plausible author line: 2-8 items, each short enough to be a name
+        if 2 <= len(parts) <= 8 and all(len(p) < 60 for p in parts):
+            return len(parts)
+    return 1
+
 
 def check_article(doc, l):
     full_text  = "\n".join(p.text for p in doc.paragraphs)
@@ -288,6 +303,7 @@ def check_article(doc, l):
 
     orcid = len(re.findall(r"orcid\.org/\d{4}-\d{4}-\d{4}-\d{4}", full_text, re.IGNORECASE))
     add(8, l["c_orcid"], l["c_orcid_req"], f"{orcid} ORCID", "✅" if orcid >= 1 else "⚠️")
+    author_count = detect_author_count(doc, orcid)
 
     for num, name, keys in [
         (9,  l["c_intro"], ["введение", "кіріспе", "introduction"]),
@@ -302,14 +318,23 @@ def check_article(doc, l):
 
     for num, key, kws, st_ok in [
         (14, l["c_supp"],    ["вспомогательный материал","қосымша материалдар","supplementary materials"], "⚠️"),
-        (15, l["c_contrib"], ["вклад авторов","author contributions","авторлардың үлесі","авторлық үлестер"], "❌"),
         (16, l["c_authinfo"],["информация об авторе","author information","автор туралы ақпарат"], "⚠️"),
         (17, l["c_fund"],    ["финансирование","funding","қаржыландыру"], "❌"),
         (18, l["c_ack"],     ["благодарност","acknowledgements","acknowledgments","алғыстар"], "⚠️"),
     ]:
         f = any(k in text_low for k in kws)
-        req = "CRediT" if num == 15 else l["c_req_obl"]
-        add(num, key, req, l["found"] if f else l["not_found"], "✅" if f else st_ok)
+        add(num, key, l["c_req_obl"], l["found"] if f else l["not_found"], "✅" if f else st_ok)
+
+    # §7 Author contributions — required only when authors > 1
+    contrib_kws = ["вклад авторов","author contributions","авторлардың үлесі","авторлық үлестер"]
+    contrib_found = any(k in text_low for k in contrib_kws)
+    if author_count > 1:
+        contrib_req    = "CRediT (авторов: " + str(author_count) + ")"
+        contrib_status = "✅" if contrib_found else "❌"
+    else:
+        contrib_req    = "CRediT (1 автор — не обязательно)"
+        contrib_status = "✅" if contrib_found else "⚠️"
+    add(15, l["c_contrib"], contrib_req, l["found"] if contrib_found else l["not_found"], contrib_status)
 
     conflict = has_conflict_section(doc, full_text)
     add(19, l["c_conflict"], l["c_req_obl"], l["found"] if conflict else l["not_found"],
