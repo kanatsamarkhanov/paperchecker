@@ -641,7 +641,6 @@ if uploaded_file:
                 f"*({l['req']}: {prob['Требование']})*")
 else:
     st.info(l["no_file"])
-st.markdown("---")
 
 fc  = "#7b96b8" if st.session_state.theme == "dark" else "#555"
 flk = "#58a6ff"  if st.session_state.theme == "dark" else "#0969da"
