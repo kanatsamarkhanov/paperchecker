@@ -551,7 +551,7 @@ uploaded_file = st.file_uploader(l["upload_title"], type=["docx"], help=l["uploa
 
 if uploaded_file:
     if "counted_real_user" not in st.session_state:
-    st.session_state.counted_real_user = False
+        st.session_state.counted_real_user = False
 
     if not st.session_state.counted_real_user:
         st.session_state.real_users += 1
