@@ -642,6 +642,7 @@ if uploaded_file:
 else:
     st.info(l["no_file"])
 st.markdown("---")
+
 wa_col1, wa_col2, wa_col3 = st.columns([1,2,1])
 with wa_col2:
     wa_link = "https://wa.me/77027341260"
@@ -661,7 +662,7 @@ with wa_col2:
                font-size:14px;
                box-shadow:0 2px 6px rgba(0,0,0,0.25);
           ">
-            💬 WhatsApp: +7 702 734 1260
+            💬 WhatsApp contact
           </div>
         </a>
         ''',
