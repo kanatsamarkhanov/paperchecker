@@ -252,18 +252,24 @@ st.markdown("---")
 # ─── HELPERS ──────────────────────────────────────────────────────
 _KAZ_CHARS = set("қңөұүіәғҚҢӨҰҮІӘҒ")
 
-
 def detect_lang_from_text(text: str) -> str:
-    """Detect language by character frequency."""
-    kaz   = sum(1 for c in text if c in _KAZ_CHARS)
+    """
+    Step 1 — script: Latin vs Cyrillic
+    Step 2 — within Cyrillic: Kazakh special chars → kz, otherwise → ru
+    """
     latin = sum(1 for c in text if c.isalpha() and c.isascii())
-    cyr   = sum(1 for c in text if "\u0400" <= c <= "\u04FF" and c not in _KAZ_CHARS)
-    if kaz >= 2:
-        return "kz"
+    cyr   = sum(1 for c in text if "\u0400" <= c <= "\u04FF")
+    kaz   = sum(1 for c in text if c in _KAZ_CHARS)
+
+    # Step 1: determine script
     if latin > cyr:
         return "en"
-    return "ru"
 
+    # Step 2: within Cyrillic — check Kazakh-specific characters
+    if kaz >= 1:
+        return "kz"
+
+    return "ru"
 
 def extract_title_and_lang(doc: Document):
     """
