@@ -390,136 +390,136 @@ def check_article(doc: Document, l: dict):
         "10. благодарности", "10. алғыстар", "10. acknowledgements",
         "благодарност", "алғыстар", "acknowledgements", "acknowledgments"])
     add(18, l["c_ack"], l["c_req_obl"],
-        l["found"] if ack else l["not_found"],
-        "✅" if ack else "⚠️")
+    l["found"] if ack else l["not_found"],
+    "✅" if ack else "⚠️")
 
-        # 20. Конфликт интересов (RU/KZ/EN)
-        conflict_patterns = [
-            r"конфликт(ы)? интерес(а|ов)",
-            r"conflict(s)? of interest",
-            r"мүдделер қақтығысы",
-        ]
-        
-        conflict = any(
-            re.search(p, full_text, re.IGNORECASE)
-            for p in conflict_patterns)
-        
-        add(
-            19,
-            l["c_conflict"],
-            l["c_req_obl"],
-            l["found"] if conflict else l["not_found"],
-            "✅" if conflict else "❌",
-        )
-    
-    
-        # 21. Список литературы / References / Әдебиеттер
-        refs_patterns = [
-            r"список литературы",
-            r"references",
-            r"әдебиет(тер)? тізімі",
-        ]
-        
-        ann_patterns = [
-            r"\n\s*аннотация",
-            r"\n\s*abstract",
-            r"\n\s*аңдатпа",
-        ]
-        
-        refs_match = None
-        for p in refs_patterns:
-            m = re.search(p, text_low)
+    # 19. Конфликт интересов
+    conflict_patterns = [
+        r"конфликт(ы)? интерес(а|ов)",
+        r"conflict(s)? of interest",
+        r"мүдделер қақтығысы",
+    ]
+
+    conflict = any(
+        re.search(p, full_text, re.IGNORECASE)
+        for p in conflict_patterns
+    )
+
+    add(
+        19,
+        l["c_conflict"],
+        l["c_req_obl"],
+        l["found"] if conflict else l["not_found"],
+        "✅" if conflict else "❌",
+    )
+
+    # 20. Список литературы / References / Әдебиеттер
+    refs_patterns = [
+        r"список литературы",
+        r"references",
+        r"әдебиет(тер)? тізімі",
+    ]
+
+    ann_patterns = [
+        r"\n\s*аннотация",
+        r"\n\s*abstract",
+        r"\n\s*аңдатпа",
+    ]
+
+    refs_match = None
+
+    for p in refs_patterns:
+        m = re.search(p, text_low)
+        if m:
+            refs_match = m
+            break
+
+    if refs_match:
+
+        start = refs_match.end()
+
+        end = len(full_text)
+
+        for p in ann_patterns:
+            m = re.search(p, text_low[start:])
             if m:
-                refs_match = m
+                end = start + m.start()
                 break
-        
-        if refs_match:
-        
-            start = refs_match.end()
-        
-            # ищем конец блока (начало аннотаций)
-            end = len(full_text)
-        
-            for p in ann_patterns:
-                m = re.search(p, text_low[start:])
-                if m:
-                    end = start + m.start()
-                    break
-        
-            refs_text = full_text[start:end]
-        
-            # поиск нумерованных ссылок
-            ref_lines = re.findall(
-                r"\n\s*(\d+[\.\)]|\[\d+\])\s",
-                refs_text
-            )
-        
-            # если нумерации нет — считаем длинные строки
-            if len(ref_lines) == 0:
-        
-                raw_lines = refs_text.split("\n")
-        
-                ref_lines = [
-                    l for l in raw_lines
-                    if len(l.strip()) > 40
-                ]
-        
-            ref_count = len(ref_lines)
-        
-            add(
-                20,
-                "Список литературы / References",
-                "≥10 источников",
-                f"{ref_count}",
-                "✅" if ref_count >= 10 else "⚠️",
-            )
-        
-        else:
-        
-            add(
-                20,
-                "Список литературы / References",
-                l["c_req_obl"],
-                l["not_found"],
-                "❌",
-            )
+
+        refs_text = full_text[start:end]
+
+        # поиск нумерованных источников
+        ref_lines = re.findall(
+            r"\n\s*(\d+[\.\)]|\[\d+\])\s",
+            refs_text
+        )
+
+        # если нумерации нет — считаем длинные строки
+        if len(ref_lines) == 0:
+
+            raw_lines = refs_text.split("\n")
+
+            ref_lines = [
+                line for line in raw_lines
+                if len(line.strip()) > 40
+            ]
+
+        ref_count = len(ref_lines)
+
+        add(
+            20,
+            "Список литературы / References",
+            "≥10 источников",
+            f"{ref_count}",
+            "✅" if ref_count >= 10 else "⚠️",
+        )
+
+    else:
+
+        add(
+            20,
+            "Список литературы / References",
+            l["c_req_obl"],
+            l["not_found"],
+            "❌",
+        )
     # 23–25. Формат, поля, шрифт
     try:
         sec = doc.sections[0]
         w_mm = round(sec.page_width.mm)
         h_mm = round(sec.page_height.mm)
         is_a4 = (209 <= w_mm <= 211) and (296 <= h_mm <= 298)
-        add(20, l["c_paper"], l["c_paper_req"],
+        add(21, l["c_paper"], l["c_paper_req"],
             f"{w_mm}x{h_mm} мм", "✅" if is_a4 else "❌")
         t = round(sec.top_margin.mm)
         b = round(sec.bottom_margin.mm)
         lf = round(sec.left_margin.mm)
         rg = round(sec.right_margin.mm)
         margins_ok = (t == 20 and b == 20 and lf == 20 and rg == 20)
-        add(21, l["c_margins"], l["c_margins_req"],
+        add(22, l["c_margins"], l["c_margins_req"],
             f"Л:{lf} П:{rg} В:{t} Н:{b} мм",
             "✅" if margins_ok else "❌")
     except Exception:
-        add(20, l["c_paper"], l["c_paper_req"], "Қате/Ошибка", "⚠️")
-        add(21, l["c_margins"], l["c_margins_req"], "Қате/Ошибка", "⚠️")
+        add(21, l["c_paper"], l["c_paper_req"], "Қате/Ошибка", "⚠️")
+        add(22, l["c_margins"], l["c_margins_req"], "Қате/Ошибка", "⚠️")
 
     try:
         fn = doc.styles["Normal"].font.name or "?"
         fs = (doc.styles["Normal"].font.size.pt
               if doc.styles["Normal"].font.size else "?")
         ok_font = "Times New Roman" in str(fn) and fs in [11.0, 12.0]
-        add(22, l["c_font"], l["c_font_req"],
+        add(23, l["c_font"], l["c_font_req"],
             f"{fn}, {fs} pt", "✅" if ok_font else "⚠️")
     except Exception:
-        add(22, l["c_font"], l["c_font_req"], "Қате/Ошибка", "⚠️")
+        add(23, l["c_font"], l["c_font_req"], "Қате/Ошибка", "⚠️")
 
     # 26–27. Таблицы/рисунки
     tbl_count = len(doc.tables)
-    add(23, l["c_tables"], l["c_tables_req"],
+    add(24, l["c_tables"], l["c_tables_req"],
         f"{tbl_count} шт.", "✅" if tbl_count > 0 else "⚠️")
 
     img_count = len(doc.inline_shapes)
-    add(24, l["c_images"], l["c_images_req"],
+    add(25, l["c_images"], l["c_images_req"],
         f"{img_count} шт.", "⚠️" if img_count > 0 else "✅")
 
     # 28. Многоязычные аннотации
@@ -529,7 +529,7 @@ def check_article(doc: Document, l: dict):
         ok_multi = has_ru_ann and has_eng_ann
     else:
         ok_multi = has_ru_ann and has_kaz_ann
-    add(25, l["c_multi_ann"], l["c_multi_ann_req"],
+    add(26, l["c_multi_ann"], l["c_multi_ann_req"],
         l["found"] if ok_multi else l["not_found"],
         "✅" if ok_multi else "❌")
 
