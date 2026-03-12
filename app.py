@@ -7,6 +7,13 @@ import pandas as pd
 from io import BytesIO
 
 st.set_page_config(page_title="Article Checker / Мақала тексеру", page_icon="📋", layout="wide")
+# ── Simple counters ─────────────────────────────────────────────
+if "visits" not in st.session_state:
+    st.session_state.visits = 0         # every page load
+st.session_state.visits += 1
+
+if "real_users" not in st.session_state:
+    st.session_state.real_users = 0     # user who uploaded at least one file
 
 if "lang"  not in st.session_state: st.session_state.lang  = "kz"
 if "theme" not in st.session_state: st.session_state.theme = "light"
@@ -201,6 +208,14 @@ hc1, hc2, hc3 = st.columns([6, 1.8, 1.8])
 with hc1:
     st.title(l["title"])
     st.caption(l["subtitle"])
+    st.markdown(
+      f"<span style='font-size:12px;color:#7b96b8;'>"
+      f"Visitors: <b>{st.session_state.visits}</b> · "
+      f"Real users (uploaded file): <b>{st.session_state.real_users}</b>"
+      f"</span>",
+      unsafe_allow_html=True,
+    )
+
 with hc2:
     _lang_labels = {"kz": "🇰🇿 Қазақша", "ru": "🇷🇺 Русский", "en": "🇬🇧 English"}
     _lang_keys   = list(_lang_labels.keys())
@@ -535,6 +550,13 @@ _BASE = "background-color:#f6f8fa;color:#1f2328"
 uploaded_file = st.file_uploader(l["upload_title"], type=["docx"], help=l["upload_help"])
 
 if uploaded_file:
+    if "counted_real_user" not in st.session_state:
+    st.session_state.counted_real_user = False
+
+    if not st.session_state.counted_real_user:
+        st.session_state.real_users += 1
+        st.session_state.counted_real_user = True
+
     with st.spinner(l["analyzing"]):
         doc      = Document(uploaded_file)
         results, full_text, title, main_lang = check_article(doc, l)
@@ -619,6 +641,32 @@ if uploaded_file:
                 f"*({l['req']}: {prob['Требование']})*")
 else:
     st.info(l["no_file"])
+st.markdown("---")
+wa_col1, wa_col2, wa_col3 = st.columns([1,2,1])
+with wa_col2:
+    wa_link = "https://wa.me/77027341260"
+    st.markdown(
+        f'''
+        <a href="{wa_link}" target="_blank"
+           style="text-decoration:none;">
+          <div style="
+               display:inline-flex;
+               align-items:center;
+               justify-content:center;
+               padding:8px 18px;
+               border-radius:999px;
+               background-color:#25D366;
+               color:white;
+               font-weight:600;
+               font-size:14px;
+               box-shadow:0 2px 6px rgba(0,0,0,0.25);
+          ">
+            💬 WhatsApp: +7 702 734 1260
+          </div>
+        </a>
+        ''',
+        unsafe_allow_html=True,
+    )
 
 fc  = "#7b96b8" if st.session_state.theme == "dark" else "#555"
 flk = "#58a6ff"  if st.session_state.theme == "dark" else "#0969da"
