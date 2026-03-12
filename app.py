@@ -265,7 +265,7 @@ def detect_refs_style(refs_text, l):
     gost_hits = len(re.findall(
         r"[А-ЯЁA-Z][а-яёa-z]+,?\s+[А-ЯЁA-Z]\.[А-ЯЁA-Z]\.",
         refs_text))
-    best = max(apa_hits, van_hits, gost_hits, default=0)
+    best = max(apa_hits, van_hits, gost_hits)
     if best < 1:
         return l["refs_unclear"], doi_count, False
     if apa_hits == best:  return l["refs_apa"],  doi_count, True
