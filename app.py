@@ -31,8 +31,9 @@ locales = {
     "c_title":"Наименование статьи","c_title_req":"Строки 3–4 документа",
     "c_lang":"Язык статьи","c_lang_req":"По преобладанию символов",
     "c_vol":"Объём статьи","c_vol_req":"≥3500 слов",
-    "c_ann_ru":"Аннотация (рус)","c_ann_req":"≤300 слов",
-    "c_ann_kz":"Аннотация (каз)","c_ann_en":"Abstract (англ)","c_req_obl":"Обязательно",
+    "c_ann_main":"Основная аннотация","c_ann_req":"≤300 слов",
+    "c_ann_ru":"Аннотация (рус)","c_ann_kz":"Аннотация (каз)","c_ann_en":"Abstract (англ)",
+    "c_req_obl":"Обязательно",
     "c_kw":"Ключевые слова","c_kw_req":"3–10, разделитель «;»",
     "c_mrnti":"Код МРНТИ / IRSTI","c_orcid":"ORCID авторов","c_orcid_req":"Для каждого автора",
     "c_intro":"§1. Введение","c_mm":"§2. Материалы и методы",
@@ -70,8 +71,9 @@ locales = {
     "c_title":"Мақаланың атауы","c_title_req":"Құжаттың 3–4 жолдары",
     "c_lang":"Мақала тілі","c_lang_req":"Таңбалардың басымдылығы бойынша",
     "c_vol":"Мақала көлемі","c_vol_req":"≥3500 сөз",
-    "c_ann_ru":"Аңдатпа (орыс)","c_ann_req":"≤300 сөз",
-    "c_ann_kz":"Аңдатпа (қаз)","c_ann_en":"Abstract (ағылш)","c_req_obl":"Міндетті түрде",
+    "c_ann_main":"Негізгі аңдатпа","c_ann_req":"≤300 сөз",
+    "c_ann_ru":"Аңдатпа (орыс)","c_ann_kz":"Аңдатпа (қаз)","c_ann_en":"Abstract (ағылш)",
+    "c_req_obl":"Міндетті түрде",
     "c_kw":"Түйінді сөздер","c_kw_req":"3–10, бөлгіш «;»",
     "c_mrnti":"МРНТИ / IRSTI коды","c_orcid":"Авторлардың ORCID","c_orcid_req":"Әр автор үшін",
     "c_intro":"§1. Кіріспе","c_mm":"§2. Материалдар мен әдістер",
@@ -109,8 +111,9 @@ locales = {
     "c_title":"Article title","c_title_req":"Lines 3–4 of document",
     "c_lang":"Article language","c_lang_req":"By character prevalence",
     "c_vol":"Article volume","c_vol_req":"≥3500 words",
-    "c_ann_ru":"Abstract (rus)","c_ann_req":"≤300 words",
-    "c_ann_kz":"Abstract (kaz)","c_ann_en":"Abstract (eng)","c_req_obl":"Required",
+    "c_ann_main":"Main abstract","c_ann_req":"≤300 words",
+    "c_ann_ru":"Abstract (rus)","c_ann_kz":"Abstract (kaz)","c_ann_en":"Abstract (eng)",
+    "c_req_obl":"Required",
     "c_kw":"Keywords","c_kw_req":"3–10, separator ;",
     "c_mrnti":"IRSTI / МРНТИ code","c_orcid":"Author ORCIDs","c_orcid_req":"Per each author",
     "c_intro":"§1. Introduction","c_mm":"§2. Materials & Methods",
@@ -192,9 +195,7 @@ light_css = (
 
 st.markdown(dark_css if st.session_state.theme == "dark" else light_css, unsafe_allow_html=True)
 
-_DB_CARD="#0f2340"
-_DB_HEAD="#e2edf7"
-_DB_MUTED="#7b96b8"
+_DB_CARD="#0f2340"; _DB_HEAD="#e2edf7"; _DB_MUTED="#7b96b8"
 
 hc1, hc2, hc3 = st.columns([6, 1.8, 1.8])
 with hc1:
@@ -223,7 +224,7 @@ _KAZ_CHARS = set("қңөұүіәғҚҢӨҰҮІӘҒ")
 
 def detect_lang_from_text(text):
     latin = sum(1 for c in text if c.isalpha() and c.isascii())
-    cyr   = sum(1 for c in text if "Ѐ" <= c <= "ӿ")
+    cyr   = sum(1 for c in text if "\u0400" <= c <= "\u04FF")
     kaz   = sum(1 for c in text if c in _KAZ_CHARS)
     if latin > cyr: return "en"
     if kaz >= 1:    return "kz"
@@ -251,6 +252,31 @@ def has_conflict_section(doc, full_text):
         if _CONFLICT_RE.search(par.text): return True
     return False
 
+# ── Abstract extraction ───────────────────────────────────────────────────
+# Boundary keywords that signal the end of an abstract block
+_ANN_END = r"(?=ключевые\s+слова|keywords|түйінді\s+сөздер|түйін\s+сөздер|введение|кіріспе|introduction|\Z)"
+
+_ANN_PATTERNS = {
+    "ru": re.compile(
+        r"аннотация\s*[:\—\-]?\s*(.{30,}?)" + _ANN_END,
+        re.IGNORECASE | re.DOTALL,
+    ),
+    "kz": re.compile(
+        r"аңдатпа\s*[:\—\-]?\s*(.{30,}?)" + _ANN_END,
+        re.IGNORECASE | re.DOTALL,
+    ),
+    "en": re.compile(
+        r"\babstract\b\s*[:\—\-]?\s*(.{30,}?)" + _ANN_END,
+        re.IGNORECASE | re.DOTALL,
+    ),
+}
+
+def extract_abstract(full_text, lang):
+    """Return abstract body text for the given language, or None if not found."""
+    m = _ANN_PATTERNS[lang].search(full_text)
+    return m.group(1).strip() if m else None
+
+# ── Image analysis ────────────────────────────────────────────────────────
 _ALLOWED_FORMATS = {"TIFF", "JPEG", "PNG"}
 _MIN_DPI = 600
 
@@ -274,18 +300,10 @@ def extract_image_info(doc, l):
             fmt = (img.format or "?").upper()
             fmt_ok = fmt in _ALLOWED_FORMATS
             dpi_ok = isinstance(dw, int) and dw >= _MIN_DPI
-            if fmt_ok and dpi_ok:
-                status = "✅"
-            elif not fmt_ok and not dpi_ok:
-                status = "❌"
-            else:
-                status = "⚠️"
-            if dw:
-                real_dpi = dw
-            elif emb:
-                real_dpi = round(emb[0])
-            else:
-                real_dpi = None
+            if fmt_ok and dpi_ok:   status = "✅"
+            elif not fmt_ok and not dpi_ok: status = "❌"
+            else:                   status = "⚠️"
+            real_dpi = dw if dw else (round(emb[0]) if emb else None)
             real_dpi_str = str(real_dpi) if real_dpi else "-"
             rows.append({l["img_num"]: i+1, l["img_pixels"]: f"{px_w}x{px_h}",
                          l["img_size_mm"]: size_mm, l["img_dpi_calc"]: dpi_calc,
@@ -306,6 +324,11 @@ def detect_author_count(doc, orcid_count):
             return len(parts)
     return 1
 
+# ── Main checker ──────────────────────────────────────────────────────────
+_ALL_LANGS   = ["ru", "kz", "en"]
+_LANG_LABELS = {"ru": "Русский", "kz": "Қазақша", "en": "English"}
+_ANN_KEYS    = {"ru": "c_ann_ru", "kz": "c_ann_kz", "en": "c_ann_en"}
+
 def check_article(doc, l):
     full_text  = "\n".join(p.text for p in doc.paragraphs)
     word_count = len(full_text.split())
@@ -314,33 +337,35 @@ def check_article(doc, l):
     title, main_lang = extract_title_and_lang(doc)
 
     def add(num, crit, req, found, status):
-        results.append({"\u2116": num, "Критерий": crit, "Требование": req,
+        results.append({"№": num, "Критерий": crit, "Требование": req,
                         "Найдено": found, "Статус": status})
 
-    add(0,  l["c_title"], l["c_title_req"], title or l["not_found"], "✅" if title else "⚠️")
-    lang_map = {"ru": "Русский", "kz": "Қазақша", "en": "English"}
-    add(1,  l["c_lang"],  l["c_lang_req"],  lang_map.get(main_lang, main_lang), "✅")
-    add(2,  l["c_vol"],   l["c_vol_req"],   f"{word_count} {l['words']}",
+    add(0, l["c_title"], l["c_title_req"], title or l["not_found"], "✅" if title else "⚠️")
+    add(1, l["c_lang"],  l["c_lang_req"],  _LANG_LABELS.get(main_lang, main_lang), "✅")
+    add(2, l["c_vol"],   l["c_vol_req"],   f"{word_count} {l['words']}",
         "✅" if word_count >= 3500 else "⚠️")
 
-    m = re.search(r"аннотация[:\s]+(.{50,}?)(?=ключевые|keywords|түйін|abstract)",
-                  full_text, re.IGNORECASE | re.DOTALL)
-    if m:
-        aw = len(m.group(1).split())
-        add(3, l["c_ann_ru"], l["c_ann_req"], f"{aw} {l['words']}", "✅" if aw <= 300 else "❌")
-        has_ru_ann = True
+    # ── Criterion 3: MAIN abstract — language matches article language ────
+    other_langs = [lg for lg in _ALL_LANGS if lg != main_lang]
+    main_ann_text = extract_abstract(full_text, main_lang)
+    main_label    = f"{l['c_ann_main']} ({_LANG_LABELS[main_lang]})"
+    if main_ann_text:
+        aw = len(main_ann_text.split())
+        add(3, main_label, l["c_ann_req"],
+            f"{aw} {l['words']}", "✅" if aw <= 300 else "❌")
     else:
-        add(3, l["c_ann_ru"], l["c_ann_req"], l["not_found"], "⚠️"); has_ru_ann = False
+        add(3, main_label, l["c_ann_req"], l["not_found"], "⚠️")
 
-    has_kaz_ann = "аңдатпа" in text_low or "аннотация (қаз" in text_low
-    add(4, l["c_ann_kz"], l["c_req_obl"], l["found"] if has_kaz_ann else l["not_found"],
-        "✅" if has_kaz_ann else "❌")
+    # ── Criteria 4 & 5: the OTHER two abstracts (presence only) ──────────
+    has_other = {}
+    for num, olang in zip([4, 5], other_langs):
+        ann_text = extract_abstract(full_text, olang)
+        has_other[olang] = ann_text is not None
+        add(num, l[_ANN_KEYS[olang]], l["c_req_obl"],
+            l["found"] if has_other[olang] else l["not_found"],
+            "✅" if has_other[olang] else "❌")
 
-    has_eng_ann = bool(re.search(r"\babstract\b", full_text, re.IGNORECASE))
-    add(5, l["c_ann_en"], l["c_req_obl"], l["found"] if has_eng_ann else l["not_found"],
-        "✅" if has_eng_ann else "❌")
-
-    kw = re.search(r"(ключевые слова|keywords|түйінді сөздер|түйін сөздер)[:\s]+(.+?)(\n|$)",
+    kw = re.search(r"(ключевые слова|keywords|түйінді сөздер|түйін сөздер)[\:\s]+(.+?)(\n|$)",
                    full_text, re.IGNORECASE)
     if kw:
         kw_list = [k.strip() for k in kw.group(2).split(";") if k.strip()]
@@ -439,9 +464,7 @@ def check_article(doc, l):
     msg = f"{ic} — {l['img_see_table']}" if ic > 0 else l["not_found"]
     add(25, l["c_images"], l["c_images_req"], msg, "⚠️" if ic > 0 else "✅")
 
-    ok_multi = ((has_kaz_ann and has_eng_ann) if main_lang == "ru" else
-                (has_ru_ann  and has_eng_ann) if main_lang == "kz" else
-                (has_ru_ann  and has_kaz_ann))
+    ok_multi = all(has_other.values())
     add(26, l["c_multi_ann"], l["c_multi_ann_req"],
         l["found"] if ok_multi else l["not_found"], "✅" if ok_multi else "❌")
 
@@ -461,7 +484,7 @@ def build_docx_report(results, l, total, passed, warned, failed, score):
         tbl.rows[0].cells[i].text = h
     for r in results:
         row = tbl.add_row().cells
-        for i, k in enumerate(["\u2116", "Критерий", "Требование", "Найдено", "Статус"]):
+        for i, k in enumerate(["№", "Критерий", "Требование", "Найдено", "Статус"]):
             row[i].text = str(r.get(k, ""))
     d.save(buf); buf.seek(0); return buf.getvalue()
 
@@ -508,7 +531,7 @@ if uploaded_file:
     st.dataframe(
         df.style.apply(highlight, axis=1),
         use_container_width=True, height=880,
-        column_config={"\u2116": st.column_config.NumberColumn(width="small")},
+        column_config={"№": st.column_config.NumberColumn(width="small")},
     )
 
     if img_rows:
