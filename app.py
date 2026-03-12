@@ -659,10 +659,10 @@ with wa_col2:
                background-color:#25D366;
                color:white;
                font-weight:600;
-               font-size:14px;
+               font-size:12px;
                box-shadow:0 2px 6px rgba(0,0,0,0.25);
           ">
-            💬 WhatsApp contact
+            💬 WhatsApp
           </div>
         </a>
         ''',
