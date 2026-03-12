@@ -23,7 +23,7 @@ locales = {
     "failed":"❌ Не выпол.","score":"🏆 Соответствие",
     "det_report":"### 📋 Детальный отчёт","img_report":"### 🖼️ Анализ рисунков",
     "img_num":"№","img_pixels":"Пиксели","img_size_mm":"Размер в doc",
-    "img_dpi_calc":"DPI (расч.)","img_dpi_emb":"DPI (встр.)","img_format":"Формат","img_status":"Статус",
+    "img_dpi_calc":"DPI (расч.)","img_dpi_emb":"DPI (встр.)","img_dpi_real":"DPI реальный","img_format":"Формат","img_status":"Статус",
     "btn_csv":"⬇️ Скачать CSV","btn_xls":"⬇️ Скачать Excel","btn_docx":"⬇️ Word (DOCX)",
     "req_fix":"### ⚠️ Требует исправления","req":"требование",
     "no_file":"👆 Загрузите .docx файл, чтобы начать проверку",
@@ -63,7 +63,7 @@ locales = {
     "failed":"❌ Орындалмады","score":"🏆 Сәйкестік",
     "det_report":"### 📋 Толық есеп","img_report":"### 🖼️ Суреттерді талдау",
     "img_num":"№","img_pixels":"Пикселдер","img_size_mm":"Doc өлшемі",
-    "img_dpi_calc":"DPI (есепт.)","img_dpi_emb":"DPI (енгіз.)","img_format":"Формат","img_status":"Статус",
+    "img_dpi_calc":"DPI (есепт.)","img_dpi_emb":"DPI (енгіз.)","img_dpi_real":"Нақты DPI","img_format":"Формат","img_status":"Статус",
     "btn_csv":"⬇️ CSV жүктеу","btn_xls":"⬇️ Excel жүктеу","btn_docx":"⬇️ Word (DOCX)",
     "req_fix":"### ⚠️ Түзетуді қажет етеді","req":"талап",
     "no_file":"👆 Тексеруді бастау үшін .docx файлын жүктеңіз",
@@ -103,7 +103,7 @@ locales = {
     "failed":"❌ Failed","score":"🏆 Score",
     "det_report":"### 📋 Detailed Report","img_report":"### 🖼️ Figure Analysis",
     "img_num":"No.","img_pixels":"Pixels","img_size_mm":"Size in doc",
-    "img_dpi_calc":"DPI (calc.)","img_dpi_emb":"DPI (emb.)","img_format":"Format","img_status":"Status",
+    "img_dpi_calc":"DPI (calc.)","img_dpi_emb":"DPI (emb.)","img_dpi_real":"Real DPI","img_format":"Format","img_status":"Status",
     "btn_csv":"⬇️ Download CSV","btn_xls":"⬇️ Download Excel","btn_docx":"⬇️ Word (DOCX)",
     "req_fix":"### ⚠️ Requires Correction","req":"requirement",
     "no_file":"👆 Upload a .docx file to start checking",
@@ -304,14 +304,23 @@ def extract_image_info(doc, l):
                 status = "❌"   # both wrong
             else:
                 status = "⚠️"   # one issue
+            # real DPI: calculated value preferred (physical size known),
+            # fallback to embedded metadata, then pixel width as last resort
+            if dw:
+                real_dpi = dw
+            elif emb:
+                real_dpi = round(emb[0])
+            else:
+                real_dpi = None
+            real_dpi_str = str(real_dpi) if real_dpi else "-"
             rows.append({l["img_num"]: i+1, l["img_pixels"]: f"{px_w}x{px_h}",
                          l["img_size_mm"]: size_mm, l["img_dpi_calc"]: dpi_calc,
-                         l["img_dpi_emb"]: dpi_emb, l["img_format"]: fmt,
-                         l["img_status"]: status})
+                         l["img_dpi_emb"]: dpi_emb, l["img_dpi_real"]: real_dpi_str,
+                         l["img_format"]: fmt, l["img_status"]: status})
         except Exception:
             rows.append({l["img_num"]: i+1, l["img_pixels"]: "-", l["img_size_mm"]: size_mm,
                          l["img_dpi_calc"]: "-", l["img_dpi_emb"]: "-",
-                         l["img_format"]: "-", l["img_status"]: "⚠️"})
+                         l["img_dpi_real"]: "-", l["img_format"]: "-", l["img_status"]: "⚠️"})
     return rows
 
 def detect_author_count(doc, orcid_count):
@@ -547,7 +556,15 @@ if uploaded_file:
         st.dataframe(
             df_img.style.apply(hl_img, axis=1),
             use_container_width=True,
-            column_config={l["img_num"]: st.column_config.NumberColumn(width="small")},
+            column_config={
+                l["img_num"]:      st.column_config.NumberColumn(width="small"),
+                l["img_dpi_real"]: st.column_config.TextColumn(
+                    l["img_dpi_real"],
+                    help="Calculated from pixel dimensions ÷ physical size in document. "
+                         "Requirement: ≥ 600 DPI",
+                    width="small",
+                ),
+            },
         )
 
     st.markdown("---")
