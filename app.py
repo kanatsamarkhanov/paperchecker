@@ -271,9 +271,20 @@ _ANN_PATTERNS = {
     ),
 }
 
-def extract_abstract(full_text, lang):
-    """Return abstract body text for the given language, or None if not found."""
-    m = _ANN_PATTERNS[lang].search(full_text)
+def extract_abstract(full_text, lang, region=None):
+    """Return abstract text for given language.
+
+    region=None   – search whole text;
+    region='top'  – before references;
+    region='bottom' – after references.
+    """
+    txt = full_text
+    if region in ('top', 'bottom'):
+        m_ref = re.search(r"список литературы|references|әдебиет(тер)? тізімі", full_text, re.IGNORECASE)
+        if m_ref:
+            cut = m_ref.start() if region == 'top' else m_ref.end()
+            txt = full_text[:cut] if region == 'top' else full_text[cut:]
+    m = _ANN_PATTERNS[lang].search(txt)
     return m.group(1).strip() if m else None
 
 # ── Image analysis ────────────────────────────────────────────────────────
@@ -347,7 +358,7 @@ def check_article(doc, l):
 
     # ── Criterion 3: MAIN abstract — language matches article language ────
     other_langs = [lg for lg in _ALL_LANGS if lg != main_lang]
-    main_ann_text = extract_abstract(full_text, main_lang)
+    main_ann_text = extract_abstract(full_text, main_lang, region='top')
     main_label    = f"{l['c_ann_main']} ({_LANG_LABELS[main_lang]})"
     if main_ann_text:
         aw = len(main_ann_text.split())
@@ -359,7 +370,7 @@ def check_article(doc, l):
     # ── Criteria 4 & 5: the OTHER two abstracts (presence only) ──────────
     has_other = {}
     for num, olang in zip([4, 5], other_langs):
-        ann_text = extract_abstract(full_text, olang)
+        ann_text = extract_abstract(full_text, olang, region='bottom')
         has_other[olang] = ann_text is not None
         add(num, l[_ANN_KEYS[olang]], l["c_req_obl"],
             l["found"] if has_other[olang] else l["not_found"],
