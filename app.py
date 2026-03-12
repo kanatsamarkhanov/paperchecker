@@ -643,45 +643,49 @@ else:
     st.info(l["no_file"])
 st.markdown("---")
 
-wa_col1, wa_col2, wa_col3 = st.columns([1,2,1])
-with wa_col2:
-    wa_link = "https://wa.me/77027341260"
-    st.markdown(
-        f'''
-        <a href="{wa_link}" target="_blank"
-           style="text-decoration:none;">
-          <div style="
-               display:inline-flex;
-               align-items:center;
-               justify-content:center;
-               padding:8px 18px;
-               border-radius:999px;
-               background-color:#25D366;
-               color:white;
-               font-weight:600;
-               font-size:12px;
-               box-shadow:0 2px 6px rgba(0,0,0,0.25);
-          ">
-            💬 WhatsApp
-          </div>
-        </a>
-        ''',
-        unsafe_allow_html=True,
-    )
-
 fc  = "#7b96b8" if st.session_state.theme == "dark" else "#555"
 flk = "#58a6ff"  if st.session_state.theme == "dark" else "#0969da"
+
 st.markdown("---")
+wa_link = "https://wa.me/77027341260"
+
 st.markdown(
-    f'<div style="text-align:center;font-size:12px;color:{fc};padding:12px 0 20px 0;line-height:2.2;">'
-    f'<b style="font-size:13px;">© 2025 {l["f_author"]}</b><br>'
-    f'📧 <a href="mailto:samarkhanov_kb@enu.kz" style="color:{flk};text-decoration:none;">samarkhanov_kb@enu.kz</a>'
-    f'&nbsp;·&nbsp;'
-    f'<a href="mailto:kanat.baurzhanuly@gmail.com" style="color:{flk};text-decoration:none;">kanat.baurzhanuly@gmail.com</a><br>'
-    f'🏛️ <a href="https://fns.enu.kz/kz/page/departments/physical-and-economical-geography/faculty-members"'
-    f'     target="_blank" style="color:{flk};text-decoration:none;">{l["f_univ"]}</a><br>'
-    f'📄 {l["f_license"]}:&nbsp;'
-    f'<a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" style="color:{flk};text-decoration:none;">'
-    f'CC BY 4.0 — Creative Commons Attribution 4.0 International</a>'
-    f'</div>',
-    unsafe_allow_html=True)
+    f'''
+    <div style="text-align:center;font-size:12px;color:{fc};
+                padding:12px 0 20px 0;line-height:2.2;">
+
+      <a href="{wa_link}" target="_blank" style="text-decoration:none;">
+        <div style="
+             display:inline-flex;
+             align-items:center;
+             justify-content:center;
+             padding:6px 14px;
+             border-radius:999px;
+             background-color:#25D366;
+             color:white;
+             font-weight:600;
+             font-size:11px;
+             box-shadow:0 1px 3px rgba(0,0,0,0.25);
+             margin-bottom:10px;
+        ">
+          💬 WhatsApp
+        </div>
+      </a><br>
+
+      <b style="font-size:13px;">© 2025 {l["f_author"]}</b><br>
+      📧 <a href="mailto:samarkhanov_kb@enu.kz"
+            style="color:{flk};text-decoration:none;">samarkhanov_kb@enu.kz</a>
+      &nbsp;·&nbsp;
+      <a href="mailto:kanat.baurzhanuly@gmail.com"
+         style="color:{flk};text-decoration:none;">kanat.baurzhanuly@gmail.com</a><br>
+      🏛️ <a href="https://fns.enu.kz/kz/page/departments/physical-and-economical-geography/faculty-members"
+             target="_blank" style="color:{flk};text-decoration:none;">{l["f_univ"]}</a><br>
+      📄 {l["f_license"]}:&nbsp;
+      <a href="https://creativecommons.org/licenses/by/4.0/"
+         target="_blank" style="color:{flk};text-decoration:none;">
+         CC BY 4.0 — Creative Commons Attribution 4.0 International
+      </a>
+    </div>
+    ''',
+    unsafe_allow_html=True,
+)
