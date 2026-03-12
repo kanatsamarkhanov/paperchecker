@@ -23,7 +23,8 @@ locales = {
     "failed":"❌ Не выпол.","score":"🏆 Соответствие",
     "det_report":"### 📋 Детальный отчёт","img_report":"### 🖼️ Анализ рисунков",
     "img_num":"№","img_pixels":"Пиксели","img_size_mm":"Размер в doc",
-    "img_dpi_calc":"DPI (расч.)","img_dpi_emb":"DPI (встр.)","img_dpi_real":"DPI реальный","img_format":"Формат","img_status":"Статус",
+    "img_dpi_calc":"DPI (расч.)","img_dpi_emb":"DPI (встр.)","img_dpi_real":"DPI реальный",
+    "img_format":"Формат","img_status":"Статус",
     "btn_csv":"⬇️ Скачать CSV","btn_xls":"⬇️ Скачать Excel","btn_docx":"⬇️ Word (DOCX)",
     "req_fix":"### ⚠️ Требует исправления","req":"требование",
     "no_file":"👆 Загрузите .docx файл, чтобы начать проверку",
@@ -45,9 +46,7 @@ locales = {
     "c_tables":"Таблицы","c_tables_req":"Должны быть в тексте",
     "c_images":"Рисунки","c_images_req":"600 DPI, TIFF/JPEG/PNG",
     "c_multi_ann":"Многоязычные аннотации","c_multi_ann_req":"Ещё 2 аннотации на других языках",
-    "c_refs_style":"§21б. Стиль ссылок","c_refs_style_req":"APA / Vancouver / ГОСТ",
-    "refs_apa":"APA","refs_van":"Vancouver","refs_gost":"ГОСТ","refs_unclear":"Не определён",
-    "refs_doi":"DOI-ссылок","img_see_table":"см. таблицу ниже",
+    "img_see_table":"см. таблицу ниже",
     "found":"Найдено","not_found":"Отсутствует","words":"слов",
     "f_author":"Канат Самарханов / Kanat Samarkhanov","f_license":"Лицензия",
     "f_univ":"ЕНУ им. Л.Н. Гумилева — Кафедра физической и экономической географии",
@@ -63,7 +62,8 @@ locales = {
     "failed":"❌ Орындалмады","score":"🏆 Сәйкестік",
     "det_report":"### 📋 Толық есеп","img_report":"### 🖼️ Суреттерді талдау",
     "img_num":"№","img_pixels":"Пикселдер","img_size_mm":"Doc өлшемі",
-    "img_dpi_calc":"DPI (есепт.)","img_dpi_emb":"DPI (енгіз.)","img_dpi_real":"Нақты DPI","img_format":"Формат","img_status":"Статус",
+    "img_dpi_calc":"DPI (есепт.)","img_dpi_emb":"DPI (енгіз.)","img_dpi_real":"Нақты DPI",
+    "img_format":"Формат","img_status":"Статус",
     "btn_csv":"⬇️ CSV жүктеу","btn_xls":"⬇️ Excel жүктеу","btn_docx":"⬇️ Word (DOCX)",
     "req_fix":"### ⚠️ Түзетуді қажет етеді","req":"талап",
     "no_file":"👆 Тексеруді бастау үшін .docx файлын жүктеңіз",
@@ -85,9 +85,7 @@ locales = {
     "c_tables":"Кестелер","c_tables_req":"Мәтінде болуы керек",
     "c_images":"Суреттер","c_images_req":"600 DPI, TIFF/JPEG/PNG",
     "c_multi_ann":"Көптілді аңдатпалар","c_multi_ann_req":"Басқа 2 тілде аңдатпа болуы керек",
-    "c_refs_style":"§21б. Сілтеме стилі","c_refs_style_req":"APA / Vancouver / МЕСТ",
-    "refs_apa":"APA","refs_van":"Vancouver","refs_gost":"МЕСТ","refs_unclear":"Анықталмады",
-    "refs_doi":"DOI-сілтемелер","img_see_table":"төмендегі кестені қараңыз",
+    "img_see_table":"төмендегі кестені қараңыз",
     "found":"Табылды","not_found":"Жоқ","words":"сөз",
     "f_author":"Канат Самарханов / Kanat Samarkhanov","f_license":"Лицензия",
     "f_univ":"Л.Н. Гумилев атындағы ЕҰУ — Физикалық және экономикалық география кафедрасы",
@@ -103,7 +101,8 @@ locales = {
     "failed":"❌ Failed","score":"🏆 Score",
     "det_report":"### 📋 Detailed Report","img_report":"### 🖼️ Figure Analysis",
     "img_num":"No.","img_pixels":"Pixels","img_size_mm":"Size in doc",
-    "img_dpi_calc":"DPI (calc.)","img_dpi_emb":"DPI (emb.)","img_dpi_real":"Real DPI","img_format":"Format","img_status":"Status",
+    "img_dpi_calc":"DPI (calc.)","img_dpi_emb":"DPI (emb.)","img_dpi_real":"Real DPI",
+    "img_format":"Format","img_status":"Status",
     "btn_csv":"⬇️ Download CSV","btn_xls":"⬇️ Download Excel","btn_docx":"⬇️ Word (DOCX)",
     "req_fix":"### ⚠️ Requires Correction","req":"requirement",
     "no_file":"👆 Upload a .docx file to start checking",
@@ -125,9 +124,7 @@ locales = {
     "c_tables":"Tables","c_tables_req":"Must be in text",
     "c_images":"Figures","c_images_req":"600 DPI, TIFF/JPEG/PNG",
     "c_multi_ann":"Multilingual abstracts","c_multi_ann_req":"2 more abstracts in other languages",
-    "c_refs_style":"§21b. Reference style","c_refs_style_req":"APA / Vancouver / GOST",
-    "refs_apa":"APA","refs_van":"Vancouver","refs_gost":"GOST","refs_unclear":"Unclear",
-    "refs_doi":"DOI links","img_see_table":"see table below",
+    "img_see_table":"see table below",
     "found":"Found","not_found":"Not found","words":"words",
     "f_author":"Kanat Samarkhanov","f_license":"License",
     "f_univ":"L.N. Gumilyov ENU — Department of Physical and Economic Geography",
@@ -195,10 +192,10 @@ light_css = (
 
 st.markdown(dark_css if st.session_state.theme == "dark" else light_css, unsafe_allow_html=True)
 
-_DB_BG="0d1b2e"; _DB_CARD="#0f2340"; _DB_BORDER="#1e3a5f"
-_DB_TEXT="#c9d8ee"; _DB_HEAD="#e2edf7"; _DB_MUTED="#7b96b8"
+_DB_CARD="#0f2340"
+_DB_HEAD="#e2edf7"
+_DB_MUTED="#7b96b8"
 
-# ── header row: title + language select + theme button ──────────────────────
 hc1, hc2, hc3 = st.columns([6, 1.8, 1.8])
 with hc1:
     st.title(l["title"])
@@ -222,12 +219,11 @@ with hc3:
         st.rerun()
 st.markdown("---")
 
-
 _KAZ_CHARS = set("қңөұүіәғҚҢӨҰҮІӘҒ")
 
 def detect_lang_from_text(text):
     latin = sum(1 for c in text if c.isalpha() and c.isascii())
-    cyr   = sum(1 for c in text if "\u0400" <= c <= "\u04FF")
+    cyr   = sum(1 for c in text if "Ѐ" <= c <= "ӿ")
     kaz   = sum(1 for c in text if c in _KAZ_CHARS)
     if latin > cyr: return "en"
     if kaz >= 1:    return "kz"
@@ -255,26 +251,6 @@ def has_conflict_section(doc, full_text):
         if _CONFLICT_RE.search(par.text): return True
     return False
 
-def detect_refs_style(refs_text, l):
-    doi_count = len(re.findall(r"doi\.org|https?://doi", refs_text, re.IGNORECASE))
-    # APA: год в скобках (2023) или (2023a)
-    apa_hits  = len(re.findall(r"\(\d{4}[a-z]?\)", refs_text))
-    # Vancouver: строка начинается с [1] или 1. / 1) / 1:
-    van_hits  = len(re.findall(r"(?:^|\n)\s*(?:\[\d+\]|\d{1,3}[.):\s])\s+\S", refs_text))
-    # ГОСТ: Фамилия А.А. или Фамилия, А.А. — кириллица и латиница
-    gost_hits = len(re.findall(
-        r"[А-ЯЁA-Z][а-яёa-z]{1,20}[,.]?\s+[А-ЯЁA-Z]\.[А-ЯЁA-Z]\.",
-        refs_text))
-    # нумерованный список без скобок: "1. Автор..."
-    num_plain = len(re.findall(r"(?:^|\n)\s*\d{1,3}\.\s+[А-ЯЁA-Z]", refs_text))
-    van_total = van_hits + num_plain
-    best = max(apa_hits, van_total, gost_hits)
-    if best < 1:
-        return l["refs_unclear"], doi_count, False
-    if apa_hits  == best: return l["refs_apa"], doi_count, True
-    if van_total == best: return l["refs_van"], doi_count, True
-    return l["refs_gost"], doi_count, True
-
 _ALLOWED_FORMATS = {"TIFF", "JPEG", "PNG"}
 _MIN_DPI = 600
 
@@ -296,16 +272,14 @@ def extract_image_info(doc, l):
             emb = img.info.get("dpi")
             dpi_emb = f"{round(emb[0])}x{round(emb[1])}" if emb else "-"
             fmt = (img.format or "?").upper()
-            fmt_ok  = fmt in _ALLOWED_FORMATS
-            dpi_ok  = isinstance(dw, int) and dw >= _MIN_DPI
+            fmt_ok = fmt in _ALLOWED_FORMATS
+            dpi_ok = isinstance(dw, int) and dw >= _MIN_DPI
             if fmt_ok and dpi_ok:
                 status = "✅"
             elif not fmt_ok and not dpi_ok:
-                status = "❌"   # both wrong
+                status = "❌"
             else:
-                status = "⚠️"   # one issue
-            # real DPI: calculated value preferred (physical size known),
-            # fallback to embedded metadata, then pixel width as last resort
+                status = "⚠️"
             if dw:
                 real_dpi = dw
             elif emb:
@@ -332,7 +306,6 @@ def detect_author_count(doc, orcid_count):
             return len(parts)
     return 1
 
-
 def check_article(doc, l):
     full_text  = "\n".join(p.text for p in doc.paragraphs)
     word_count = len(full_text.split())
@@ -341,7 +314,7 @@ def check_article(doc, l):
     title, main_lang = extract_title_and_lang(doc)
 
     def add(num, crit, req, found, status):
-        results.append({"№": num, "Критерий": crit, "Требование": req,
+        results.append({"\u2116": num, "Критерий": crit, "Требование": req,
                         "Найдено": found, "Статус": status})
 
     add(0,  l["c_title"], l["c_title_req"], title or l["not_found"], "✅" if title else "⚠️")
@@ -428,7 +401,6 @@ def check_article(doc, l):
         m2 = re.search(pat, text_low)
         if m2: refs_match = m2; break
 
-    refs_text = ""
     if refs_match:
         refs_text = full_text[refs_match.end():]
         rl = re.findall(r"\n\s*(\[\d+\]|\d+[.)]) ", refs_text)
@@ -439,46 +411,38 @@ def check_article(doc, l):
     else:
         add(20, "References / Список литературы", l["c_req_obl"], l["not_found"], "❌")
 
-    if refs_text:
-        ref_style, doi_count, style_ok = detect_refs_style(refs_text, l)
-        add(21, l["c_refs_style"], l["c_refs_style_req"],
-            f"{ref_style} | {l['refs_doi']}: {doi_count}",
-            "✅" if style_ok else "⚠️")
-    else:
-        add(21, l["c_refs_style"], l["c_refs_style_req"], l["not_found"], "⚠️")
-
     try:
         sec   = doc.sections[0]
         w_mm  = round(sec.page_width.mm); h_mm = round(sec.page_height.mm)
         is_a4 = (209 <= w_mm <= 211) and (296 <= h_mm <= 298)
-        add(22, l["c_paper"], l["c_paper_req"], f"{w_mm}x{h_mm} mm", "✅" if is_a4 else "❌")
+        add(21, l["c_paper"], l["c_paper_req"], f"{w_mm}x{h_mm} mm", "✅" if is_a4 else "❌")
         t,b,lf,rg = (round(sec.top_margin.mm), round(sec.bottom_margin.mm),
                      round(sec.left_margin.mm), round(sec.right_margin.mm))
-        add(23, l["c_margins"], l["c_margins_req"], f"L:{lf} R:{rg} T:{t} B:{b} mm",
+        add(22, l["c_margins"], l["c_margins_req"], f"L:{lf} R:{rg} T:{t} B:{b} mm",
             "✅" if all(x == 20 for x in [t,b,lf,rg]) else "❌")
     except Exception:
-        add(22, l["c_paper"],   l["c_paper_req"],  "Error", "⚠️")
-        add(23, l["c_margins"], l["c_margins_req"], "Error", "⚠️")
+        add(21, l["c_paper"],   l["c_paper_req"],  "Error", "⚠️")
+        add(22, l["c_margins"], l["c_margins_req"], "Error", "⚠️")
 
     try:
         fn   = doc.styles["Normal"].font.name or "?"
         fs   = doc.styles["Normal"].font.size.pt if doc.styles["Normal"].font.size else "?"
         ok_f = "Times New Roman" in str(fn) and fs in [11.0, 12.0]
-        add(24, l["c_font"], l["c_font_req"], f"{fn}, {fs} pt", "✅" if ok_f else "⚠️")
+        add(23, l["c_font"], l["c_font_req"], f"{fn}, {fs} pt", "✅" if ok_f else "⚠️")
     except Exception:
-        add(24, l["c_font"], l["c_font_req"], "Error", "⚠️")
+        add(23, l["c_font"], l["c_font_req"], "Error", "⚠️")
 
     tc = len(doc.tables)
-    add(25, l["c_tables"], l["c_tables_req"], str(tc), "✅" if tc > 0 else "⚠️")
+    add(24, l["c_tables"], l["c_tables_req"], str(tc), "✅" if tc > 0 else "⚠️")
 
     ic  = len(doc.inline_shapes)
     msg = f"{ic} — {l['img_see_table']}" if ic > 0 else l["not_found"]
-    add(26, l["c_images"], l["c_images_req"], msg, "⚠️" if ic > 0 else "✅")
+    add(25, l["c_images"], l["c_images_req"], msg, "⚠️" if ic > 0 else "✅")
 
     ok_multi = ((has_kaz_ann and has_eng_ann) if main_lang == "ru" else
                 (has_ru_ann  and has_eng_ann) if main_lang == "kz" else
                 (has_ru_ann  and has_kaz_ann))
-    add(27, l["c_multi_ann"], l["c_multi_ann_req"],
+    add(26, l["c_multi_ann"], l["c_multi_ann_req"],
         l["found"] if ok_multi else l["not_found"], "✅" if ok_multi else "❌")
 
     return results, full_text, title, main_lang
@@ -497,11 +461,10 @@ def build_docx_report(results, l, total, passed, warned, failed, score):
         tbl.rows[0].cells[i].text = h
     for r in results:
         row = tbl.add_row().cells
-        for i, k in enumerate(["№", "Критерий", "Требование", "Найдено", "Статус"]):
+        for i, k in enumerate(["\u2116", "Критерий", "Требование", "Найдено", "Статус"]):
             row[i].text = str(r.get(k, ""))
     d.save(buf); buf.seek(0); return buf.getvalue()
 
-# ── uniform table style — same in both themes (light palette) ────────────
 _ST   = {"✅": "background-color:#dafbe1;color:#1a7f37;font-weight:500",
          "⚠️": "background-color:#fff8c5;color:#7d4e00;font-weight:500",
          "❌": "background-color:#ffebe9;color:#cf222e;font-weight:500"}
@@ -544,8 +507,8 @@ if uploaded_file:
     st.markdown(l["det_report"])
     st.dataframe(
         df.style.apply(highlight, axis=1),
-        use_container_width=True, height=930,
-        column_config={"№": st.column_config.NumberColumn(width="small")},
+        use_container_width=True, height=880,
+        column_config={"\u2116": st.column_config.NumberColumn(width="small")},
     )
 
     if img_rows:
@@ -560,8 +523,7 @@ if uploaded_file:
                 l["img_num"]:      st.column_config.NumberColumn(width="small"),
                 l["img_dpi_real"]: st.column_config.TextColumn(
                     l["img_dpi_real"],
-                    help="Calculated from pixel dimensions ÷ physical size in document. "
-                         "Requirement: ≥ 600 DPI",
+                    help="Calculated from pixel dimensions / physical size. Requirement: >= 600 DPI",
                     width="small",
                 ),
             },
