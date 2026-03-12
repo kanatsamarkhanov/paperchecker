@@ -5,20 +5,17 @@ import re
 import pandas as pd
 from io import BytesIO
 
-# ─── PAGE CONFIG ──────────────────────────────────────────────────
 st.set_page_config(
     page_title="Чекер статьи / Мақаланы тексеру",
     page_icon="📋",
     layout="wide"
 )
 
-# ─── SESSION STATE ────────────────────────────────────────────────
 if "lang" not in st.session_state:
     st.session_state.lang = "kz"
 if "theme" not in st.session_state:
     st.session_state.theme = "light"
 
-# ─── LOCALES ──────────────────────────────────────────────────────
 locales = {
     "ru": {
         "title": "📋 Автоматическая проверка статьи",
@@ -42,11 +39,10 @@ locales = {
         "req_fix": "### ⚠️ Требует исправления",
         "req": "требование",
         "no_file": "👆 Загрузите .docx файл, чтобы начать проверку",
-        # Критерии
-        "c_title":      "Название статьи",
-        "c_title_req":  "Из первых 10 строк документа",
+        "c_title": "Название статьи",
+        "c_title_req": "Строки 3–5 документа",
         "c_lang": "Язык статьи",
-        "c_lang_req": "По названию / первым строкам",
+        "c_lang_req": "По названию статьи",
         "c_vol": "Объём статьи",
         "c_vol_req": "≥3500 слов",
         "c_ann_ru": "Аннотация (рус)",
@@ -108,10 +104,10 @@ locales = {
         "req_fix": "### ⚠️ Түзетуді қажет етеді",
         "req": "талап",
         "no_file": "👆 Тексеруді бастау үшін .docx файлын жүктеңіз",
-        "c_title":      "Мақала атауы",
-        "c_title_req":  "Құжаттың алғашқы 10 жолынан",
+        "c_title": "Мақала атауы",
+        "c_title_req": "Құжаттың 3–5 жолдары",
         "c_lang": "Мақала тілі",
-        "c_lang_req": "Атауы / алғашқы жолдары бойынша",
+        "c_lang_req": "Мақала атауы бойынша",
         "c_vol": "Мақала көлемі",
         "c_vol_req": "≥3500 сөз",
         "c_ann_ru": "Аңдатпа (орыс)",
@@ -155,25 +151,89 @@ locales = {
 
 l = locales[st.session_state.lang]
 
-# ─── THEME CSS ─────────────────────────────────────────────────────
+# ─── GITHUB-STYLE THEME CSS ───────────────────────────────────────
 dark_css = """
 <style>
-.stApp{background-color:#0d1117;color:#c9d1d9;}
-h1,h2,h3,h4,h5{color:#e6edf3!important;}
-.stMetric{background:#161b22;border:1px solid #30363d;color:#c9d1d9;padding:12px;border-radius:8px;}
-.stButton>button{background-color:#21262d;color:#c9d1d9;border:1px solid #30363d;}
-.stButton>button:hover{background-color:#30363d;}
+/* GitHub dark background */
+.stApp {
+    background-color: #0d1117;
+    color: #c9d1d9;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+}
+/* All headings */
+h1, h2, h3, h4, h5, h6, .stMarkdown h1, .stMarkdown h2, .stMarkdown h3 {
+    color: #e6edf3 !important;
+    font-weight: 600;
+}
+/* Paragraph text */
+p, .stMarkdown p, label, .stCaption {
+    color: #c9d1d9 !important;
+}
+/* Metric cards */
+.stMetric {
+    background: #161b22;
+    border: 1px solid #30363d;
+    color: #c9d1d9;
+    padding: 12px 16px;
+    border-radius: 6px;
+}
+[data-testid="stMetricValue"] { color: #e6edf3 !important; }
+[data-testid="stMetricLabel"] { color: #8b949e !important; }
+/* Buttons */
+.stButton > button {
+    background-color: #21262d;
+    color: #c9d1d9;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+}
+.stButton > button:hover {
+    background-color: #30363d;
+    border-color: #8b949e;
+    color: #e6edf3;
+}
+/* File uploader */
+[data-testid="stFileUploader"] {
+    background-color: #161b22;
+    border: 1px dashed #30363d;
+    border-radius: 6px;
+}
+/* DataFrame */
+.stDataFrame {
+    border: 1px solid #30363d !important;
+    border-radius: 6px;
+}
+/* Download buttons */
+[data-testid="stDownloadButton"] > button {
+    background-color: #238636;
+    color: #ffffff;
+    border: 1px solid #2ea043;
+    border-radius: 6px;
+}
+[data-testid="stDownloadButton"] > button:hover {
+    background-color: #2ea043;
+}
+/* Divider */
+hr { border-color: #30363d; }
+/* Spinner text */
+.stSpinner > div { color: #c9d1d9 !important; }
 </style>
 """
+
 light_css = """
 <style>
-.stMetric{background:#ffffff;padding:12px;border-radius:10px;box-shadow:0 2px 6px rgba(0,0,0,0.08);}
-h1,h2,h3{color:#1a3a5c;}
+.stMetric {
+    background: #ffffff;
+    padding: 12px;
+    border-radius: 10px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+}
+h1, h2, h3 { color: #1a3a5c; }
 </style>
 """
+
 st.markdown(dark_css if st.session_state.theme == "dark" else light_css, unsafe_allow_html=True)
 
-# ─── TOP BUTTONS ───────────────────────────────────────────────────
+# ─── TOP BUTTONS ──────────────────────────────────────────────────
 col1, col2, col3 = st.columns([7, 1.5, 1.5])
 with col2:
     if st.button(l["btn_lang"], use_container_width=True):
@@ -189,11 +249,12 @@ st.title(l["title"])
 st.caption(l["subtitle"])
 st.markdown("---")
 
-# ─── HELPERS ───────────────────────────────────────────────────────
+# ─── HELPERS ──────────────────────────────────────────────────────
 _KAZ_CHARS = set("қңөұүіәғҚҢӨҰҮІӘҒ")
 
+
 def detect_lang_from_text(text: str) -> str:
-    """Detect language by character frequency in the given text."""
+    """Detect language by character frequency."""
     kaz   = sum(1 for c in text if c in _KAZ_CHARS)
     latin = sum(1 for c in text if c.isalpha() and c.isascii())
     cyr   = sum(1 for c in text if "\u0400" <= c <= "\u04FF" and c not in _KAZ_CHARS)
@@ -204,46 +265,26 @@ def detect_lang_from_text(text: str) -> str:
     return "ru"
 
 
-def extract_title_author_lang(doc: Document):
-    """Return (title, author_str, main_lang) using first 10 paragraphs."""
-    header_pars = [p for p in doc.paragraphs[:10] if p.text.strip()]
+def extract_title_and_lang(doc: Document):
+    """
+    Title: taken from non-empty paragraphs at positions 3–5 (index 2–4).
+    The longest non-empty paragraph among them is used as the title.
+    Language: detected solely from the title text.
+    Author search is excluded.
+    """
+    # Collect all non-empty paragraphs
+    non_empty = [p.text.strip() for p in doc.paragraphs if p.text.strip()]
 
-    title      = ""
-    author_str = "to be defined"
+    # Lines 3–5 → index 2, 3, 4 (0-based)
+    candidates = non_empty[2:5] if len(non_empty) >= 3 else non_empty
 
-    # ── Title: bold 14 pt run ──────────────────────────────────────
-    for p in header_pars:
-        for r in p.runs:
-            if r.font.bold and r.font.size and 13.5 <= r.font.size.pt <= 14.5:
-                title = p.text.strip()
-                break
-        if title:
-            break
+    # Pick the longest candidate as the title
+    title = max(candidates, key=len) if candidates else ""
 
-    # Fallback: first non-empty paragraph
-    if not title and header_pars:
-        title = header_pars[0].text.strip()
+    # Language from title only
+    main_lang = detect_lang_from_text(title)
 
-    # ── Author: bold 12 pt run (skip title paragraph) ─────────────
-    for p in header_pars:
-        if p.text.strip() == title:
-            continue
-        for r in p.runs:
-            if r.font.bold and r.font.size and 11.5 <= r.font.size.pt <= 12.5:
-                cleaned = re.sub(r"\d+[\*,]?", "", p.text.strip())
-                cleaned = re.sub(r"\s+(және|и|and)\s+", ", ", cleaned, flags=re.IGNORECASE)
-                parts = [s.strip() for s in cleaned.split(",") if s.strip()]
-                if parts:
-                    author_str = parts[0]
-                break
-        if author_str != "to be defined":
-            break
-
-    # ── Language: from title + first 10 lines ─────────────────────
-    sample = title + " " + " ".join(p.text for p in header_pars)
-    main_lang = detect_lang_from_text(sample)
-
-    return title, author_str, main_lang
+    return title, main_lang
 
 
 def title_for_filename(title: str) -> str:
@@ -253,35 +294,37 @@ def title_for_filename(title: str) -> str:
     return clean.strip().replace(" ", "_")[:40] or "report"
 
 
-# ─── MAIN CHECK FUNCTION ───────────────────────────────────────────
+# ─── MAIN CHECK FUNCTION ──────────────────────────────────────────
 def check_article(doc: Document, l: dict):
     full_text  = "\n".join(p.text for p in doc.paragraphs)
     word_count = len(full_text.split())
     text_low   = full_text.lower()
     results    = []
 
-    title, author_str, main_lang = extract_title_author_lang(doc)
+    title, main_lang = extract_title_and_lang(doc)
 
     def add(num, criterion, requirement, found_val, status):
         results.append({
-            "№":         num,
-            "Критерий":  criterion,
+            "№": num,
+            "Критерий": criterion,
             "Требование": requirement,
-            "Найдено":   found_val,
-            "Статус":    status,
+            "Найдено": found_val,
+            "Статус": status,
         })
 
-    # 0. Название статьи  ← НОВЫЙ первый вывод
+    # 0. Название статьи (строки 3–5)
     add(0, l["c_title"], l["c_title_req"],
         title if title else l["not_found"],
         "✅" if title else "⚠️")
 
-    # 1. Язык (определяется по названию / первым 10 строкам)
+    # 1. Язык (по названию)
     lang_map = {"ru": "Русский", "kz": "Қазақша", "en": "English"}
-    add(1, l["c_lang"], l["c_lang_req"], lang_map.get(main_lang, main_lang), "✅")
+    add(1, l["c_lang"], l["c_lang_req"],
+        lang_map.get(main_lang, main_lang), "✅")
 
     # 2. Объём
-    add(2, l["c_vol"], l["c_vol_req"], f"{word_count} {l['words']}",
+    add(2, l["c_vol"], l["c_vol_req"],
+        f"{word_count} {l['words']}",
         "✅" if word_count >= 3500 else "⚠️")
 
     # 3–5. Аннотации
@@ -335,8 +378,8 @@ def check_article(doc: Document, l: dict):
     # 9–13. Основные разделы
     sections = [
         (9,  l["c_intro"], ["введение", "кіріспе", "introduction"]),
-        (10, l["c_mm"],    ["материалы и методы", "материалдар мен әдістер", "materials and methods",
-                            "материал", "әдістер"]),
+        (10, l["c_mm"],    ["материалы и методы", "материалдар мен әдістер",
+                            "materials and methods", "материал", "әдістер"]),
         (11, l["c_res"],   ["результаты", "нәтижелер", "results"]),
         (12, l["c_disc"],  ["обсуждение", "талқылау", "discussion"]),
         (13, l["c_concl"], ["заключение", "қорытынды", "conclusion"]),
@@ -351,27 +394,31 @@ def check_article(doc: Document, l: dict):
     has_supp = any(k in text_low for k in [
         "вспомогательный материал", "қосымша материалдар", "supplementary materials"])
     add(14, l["c_supp"], l["c_req_obl"],
-        l["found"] if has_supp else l["not_found"], "✅" if has_supp else "⚠️")
+        l["found"] if has_supp else l["not_found"],
+        "✅" if has_supp else "⚠️")
 
     contrib = any(k in text_low for k in [
         "вклад авторов", "author contributions", "авторлардың үлесі", "авторлық үлестер"])
     add(15, l["c_contrib"], "CRediT",
-        l["found"] if contrib else l["not_found"], "✅" if contrib else "❌")
+        l["found"] if contrib else l["not_found"],
+        "✅" if contrib else "❌")
 
     authinfo = any(k in text_low for k in [
         "информация об авторе", "author information", "автор туралы ақпарат"])
     add(16, l["c_authinfo"], l["c_req_obl"],
-        l["found"] if authinfo else l["not_found"], "✅" if authinfo else "⚠️")
+        l["found"] if authinfo else l["not_found"],
+        "✅" if authinfo else "⚠️")
 
-    fund = any(k in text_low for k in [
-        "финансирование", "funding", "қаржыландыру"])
+    fund = any(k in text_low for k in ["финансирование", "funding", "қаржыландыру"])
     add(17, l["c_fund"], l["c_req_obl"],
-        l["found"] if fund else l["not_found"], "✅" if fund else "❌")
+        l["found"] if fund else l["not_found"],
+        "✅" if fund else "❌")
 
     ack = any(k in text_low for k in [
         "благодарност", "acknowledgements", "acknowledgments", "алғыстар"])
     add(18, l["c_ack"], l["c_req_obl"],
-        l["found"] if ack else l["not_found"], "✅" if ack else "⚠️")
+        l["found"] if ack else l["not_found"],
+        "✅" if ack else "⚠️")
 
     # 19. Конфликт интересов
     conflict_patterns = [
@@ -392,7 +439,6 @@ def check_article(doc: Document, l: dict):
         if m:
             refs_match = m
             break
-
     if refs_match:
         refs_text = full_text[refs_match.end():]
         ref_lines = re.findall(r"\n\s*(\d+[\.\)]|\[\d+\])\s", refs_text)
@@ -410,22 +456,24 @@ def check_article(doc: Document, l: dict):
         w_mm = round(sec.page_width.mm)
         h_mm = round(sec.page_height.mm)
         is_a4 = (209 <= w_mm <= 211) and (296 <= h_mm <= 298)
-        add(21, l["c_paper"], l["c_paper_req"], f"{w_mm}x{h_mm} мм", "✅" if is_a4 else "❌")
-        t, b = round(sec.top_margin.mm), round(sec.bottom_margin.mm)
+        add(21, l["c_paper"], l["c_paper_req"],
+            f"{w_mm}x{h_mm} мм", "✅" if is_a4 else "❌")
+        t, b   = round(sec.top_margin.mm),  round(sec.bottom_margin.mm)
         lf, rg = round(sec.left_margin.mm), round(sec.right_margin.mm)
         add(22, l["c_margins"], l["c_margins_req"],
             f"Л:{lf} П:{rg} В:{t} Н:{b} мм",
             "✅" if (t == 20 and b == 20 and lf == 20 and rg == 20) else "❌")
     except Exception:
-        add(21, l["c_paper"],   l["c_paper_req"],   "Қате/Ошибка", "⚠️")
-        add(22, l["c_margins"], l["c_margins_req"],  "Қате/Ошибка", "⚠️")
+        add(21, l["c_paper"],   l["c_paper_req"],  "Қате/Ошибка", "⚠️")
+        add(22, l["c_margins"], l["c_margins_req"], "Қате/Ошибка", "⚠️")
 
     # 23. Шрифт
     try:
         fn = doc.styles["Normal"].font.name or "?"
         fs = doc.styles["Normal"].font.size.pt if doc.styles["Normal"].font.size else "?"
         ok_font = "Times New Roman" in str(fn) and fs in [11.0, 12.0]
-        add(23, l["c_font"], l["c_font_req"], f"{fn}, {fs} pt", "✅" if ok_font else "⚠️")
+        add(23, l["c_font"], l["c_font_req"],
+            f"{fn}, {fs} pt", "✅" if ok_font else "⚠️")
     except Exception:
         add(23, l["c_font"], l["c_font_req"], "Қате/Ошибка", "⚠️")
 
@@ -449,10 +497,10 @@ def check_article(doc: Document, l: dict):
         l["found"] if ok_multi else l["not_found"],
         "✅" if ok_multi else "❌")
 
-    return results, full_text, title, author_str, main_lang
+    return results, full_text, title, main_lang
 
 
-# ─── DOCX REPORT ──────────────────────────────────────────────────
+# ─── DOCX REPORT ─────────────────────────────────────────────────
 def build_docx_report(results, l, total, passed, warned, failed, score):
     buf = BytesIO()
     d = Document()
@@ -474,13 +522,13 @@ def build_docx_report(results, l, total, passed, warned, failed, score):
     return buf.getvalue()
 
 
-# ─── UI ───────────────────────────────────────────────────────────
+# ─── UI ──────────────────────────────────────────────────────────
 uploaded_file = st.file_uploader(l["upload_title"], type=["docx"], help=l["upload_help"])
 
 if uploaded_file:
     with st.spinner(l["analyzing"]):
         doc = Document(uploaded_file)
-        results, full_text, title, author_str, main_lang = check_article(doc, l)
+        results, full_text, title, main_lang = check_article(doc, l)
         df = pd.DataFrame(results)
 
     passed = sum(1 for r in results if r["Статус"] == "✅")
@@ -497,22 +545,25 @@ if uploaded_file:
     c4.metric(l["failed"], failed)
     c5.metric(l["score"],  f"{score}%")
 
-    bar_color = "#4caf50" if score >= 80 else "#ffc107" if score >= 60 else "#f44336"
-    bg_bar    = "#2b2b2b" if st.session_state.theme == "dark" else "#e9ecef"
+    bar_color = "#238636" if score >= 80 else "#d29922" if score >= 60 else "#da3633"
+    bg_bar    = "#161b22" if st.session_state.theme == "dark" else "#e9ecef"
+    txt_color = "#e6edf3" if st.session_state.theme == "dark" else "#ffffff"
     st.markdown(
-        f"""<div style="background:{bg_bar};border-radius:10px;height:28px;margin:8px 0 20px 0;">
-          <div style="background:{bar_color};width:{score}%;height:28px;border-radius:10px;
+        f"""<div style="background:{bg_bar};border:1px solid #30363d;border-radius:6px;
+                        height:28px;margin:8px 0 20px 0;">
+          <div style="background:{bar_color};width:{score}%;height:28px;border-radius:6px;
                       display:flex;align-items:center;justify-content:center;
-                      color:white;font-weight:bold;">{score}%</div></div>""",
+                      color:{txt_color};font-weight:600;font-size:13px;">{score}%</div>
+        </div>""",
         unsafe_allow_html=True,
     )
 
     def highlight(row):
         if st.session_state.theme == "dark":
             colors = {
-                "✅": "background-color:#1f6feb33",
-                "⚠️": "background-color:#d2992233",
-                "❌": "background-color:#da363333",
+                "✅": "background-color:#1a4a1a;color:#3fb950",
+                "⚠️": "background-color:#3d2e00;color:#d29922",
+                "❌": "background-color:#3d0e0e;color:#f85149",
             }
         else:
             colors = {
