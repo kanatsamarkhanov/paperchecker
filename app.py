@@ -162,19 +162,32 @@ l = locales[st.session_state.lang]
 # ─── THEME CSS ─────────────────────────────────────────────────────
 dark_css = """
 <style>
-.stApp{background-color:#0d1117;color:#e6edf3;}
+
+.stApp{
+background-color:#0d1117;
+color:#c9d1d9;
+}
+
+h1,h2,h3,h4,h5{
+color:#e6edf3!important;
+}
+
 .stMetric{
 background:#161b22;
 border:1px solid #30363d;
-color:#e6edf3;
+color:#c9d1d9;
 padding:12px;
-border-radius:10px;
+border-radius:8px;
 }
 
-h1,h2,h3,h4,h5,h6{color:#e6edf3!important;}
+.stButton>button{
+background-color:#21262d;
+color:#c9d1d9;
+border:1px solid #30363d;
+}
 
-div[data-testid="stDataFrame"]{
-background:#161b22;
+.stButton>button:hover{
+background-color:#30363d;
 }
 
 </style>
@@ -598,10 +611,21 @@ if uploaded_file:
     )
 
     def highlight(row):
-        c = ({"✅": "background-color:#1b5e20", "⚠️": "background-color:#795548", "❌": "background-color:#b71c1c"}
-             if st.session_state.theme == "dark"
-             else {"✅": "background-color:#d4edda", "⚠️": "background-color:#fff3cd", "❌": "background-color:#f8d7da"})
-        return [c.get(row["Статус"], "")] * len(row)
+
+    if st.session_state.theme == "dark":
+        colors = {
+            "✅": "background-color:#1f6feb33",
+            "⚠️": "background-color:#d2992233",
+            "❌": "background-color:#da363333"
+        }
+    else:
+        colors = {
+            "✅": "background-color:#d4edda",
+            "⚠️": "background-color:#fff3cd",
+            "❌": "background-color:#f8d7da"
+        }
+
+    return [colors.get(row["Статус"], "")] * len(row)
 
     st.markdown(l["det_report"])
     st.dataframe(df.style.apply(highlight, axis=1), use_container_width=True, height=900)
