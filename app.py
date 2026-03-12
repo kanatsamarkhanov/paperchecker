@@ -258,9 +258,9 @@ _ANN_END = r"(?=ключевые\s+слова|keywords|түйінді\s+сөзд
 
 _ANN_PATTERNS = {
     "ru": re.compile(
-        r"аннотац[ия][\s:–-]*(.{30,}?)" + _ANN_END,
-        re.IGNORECASE | re.DOTALL,
-    ),
+      r"[AА]ннотац[ия][\s:–-]*(.{30,}?)" + _ANN_END,
+      re.IGNORECASE | re.DOTALL,
+      ),
     "kz": re.compile(
         r"аңдатпа[\s:–-]*(.{30,}?)" + _ANN_END,
         re.IGNORECASE | re.DOTALL,
