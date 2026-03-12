@@ -6,7 +6,7 @@ import re
 import pandas as pd
 from io import BytesIO
 
-st.set_page_config(page_title="Чекер статьи / Мақаланы тексеру", page_icon="📋", layout="wide")
+st.set_page_config(page_title="Мақала дайындығын тексеру/ Проверка готовности статьи", page_icon="📋", layout="wide")
 
 if "lang" not in st.session_state: st.session_state.lang = "kz"
 if "theme" not in st.session_state: st.session_state.theme = "light"
