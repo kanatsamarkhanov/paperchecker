@@ -182,7 +182,13 @@ section[data-testid='stSidebar'] { background-color: #0d1b2e !important; }
 [data-testid='stFileUploaderDeleteBtn'] button:hover {
     color: #f85149 !important;
 }
-[data-testid='stDataFrame'],.stDataFrame iframe { border: 1px solid #1e3a5f !important; border-radius: 6px !important; }
+[data-testid='stDataFrame'], .stDataFrame iframe {
+    border: 1px solid #1e3a5f !important;
+    border-radius: 8px !important;
+    overflow: hidden !important;
+    background-color: #0a1628 !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.4) !important;
+}
 [data-testid='stAlert'] {
     background-color: #0f2340 !important; border: 1px solid #1f6feb !important;
     color: #c9d8ee !important; border-radius: 6px !important;
@@ -484,28 +490,57 @@ if uploaded_file:
         unsafe_allow_html=True)
 
     def highlight(row):
-        dk = {"✅":"background-color:#1a4a1a;color:#3fb950",
-              "⚠️":"background-color:#3d2e00;color:#d29922",
-              "❌":"background-color:#3d0e0e;color:#f85149"}
-        lt = {"✅":"background-color:#d4edda","⚠️":"background-color:#fff3cd","❌":"background-color:#f8d7da"}
-        c = dk if st.session_state.theme=="dark" else lt
-        return [c.get(row["Статус"],"")] * len(row)
+        dk = {
+            "✅": "background-color:#0d2818;color:#56d364;font-weight:500",
+            "⚠️": "background-color:#271c00;color:#e3b341;font-weight:500",
+            "❌": "background-color:#2d0f0f;color:#f85149;font-weight:500",
+        }
+        lt = {
+            "✅": "background-color:#dafbe1;color:#1a7f37;font-weight:500",
+            "⚠️": "background-color:#fff8c5;color:#7d4e00;font-weight:500",
+            "❌": "background-color:#ffebe9;color:#cf222e;font-weight:500",
+        }
+        base_dk = "background-color:#0d1f38;color:#c9d8ee"
+        base_lt = "background-color:#ffffff;color:#1f2328"
+        s = dk if st.session_state.theme == "dark" else lt
+        base = base_dk if st.session_state.theme == "dark" else base_lt
+        cell_style = s.get(row["Статус"], base)
+        return [cell_style] * len(row)
 
     st.markdown(l["det_report"])
-    st.dataframe(df.style.apply(highlight, axis=1), use_container_width=True, height=900)
+    st.dataframe(
+        df.style.apply(highlight, axis=1),
+        use_container_width=True,
+        height=900,
+        column_config={"\u2116": st.column_config.NumberColumn(width="small")},
+    )
 
     if img_rows:
         st.markdown(l["img_report"])
         df_img = pd.DataFrame(img_rows)
         scol = l["img_status"]
         def hl_img(row):
-            dk = {"✅":"background-color:#1a4a1a;color:#3fb950",
-                  "❌":"background-color:#3d0e0e;color:#f85149",
-                  "⚠️":"background-color:#3d2e00;color:#d29922"}
-            lt = {"✅":"background-color:#d4edda","❌":"background-color:#f8d7da","⚠️":"background-color:#fff3cd"}
-            c = dk if st.session_state.theme=="dark" else lt
-            return [c.get(row[scol],"")] * len(row)
-        st.dataframe(df_img.style.apply(hl_img, axis=1), use_container_width=True)
+            dk = {
+                "✅": "background-color:#0d2818;color:#56d364;font-weight:500",
+                "❌": "background-color:#2d0f0f;color:#f85149;font-weight:500",
+                "⚠️": "background-color:#271c00;color:#e3b341;font-weight:500",
+            }
+            lt = {
+                "✅": "background-color:#dafbe1;color:#1a7f37;font-weight:500",
+                "❌": "background-color:#ffebe9;color:#cf222e;font-weight:500",
+                "⚠️": "background-color:#fff8c5;color:#7d4e00;font-weight:500",
+            }
+            base_dk = "background-color:#0d1f38;color:#c9d8ee"
+            base_lt = "background-color:#ffffff;color:#1f2328"
+            s = dk if st.session_state.theme == "dark" else lt
+            base = base_dk if st.session_state.theme == "dark" else base_lt
+            cell_style = s.get(row[scol], base)
+            return [cell_style] * len(row)
+        st.dataframe(
+            df_img.style.apply(hl_img, axis=1),
+            use_container_width=True,
+            column_config={l["img_num"]: st.column_config.NumberColumn(width="small")},
+        )
 
     st.markdown("---")
     ca,cb,cc = st.columns(3)
