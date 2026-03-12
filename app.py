@@ -43,10 +43,10 @@ locales = {
         "req": "требование",
         "no_file": "👆 Загрузите .docx файл, чтобы начать проверку",
         # Критерии
-        "c_author": "Имя первого автора",
-        "c_author_req": "Имя Фамилия из шапки статьи",
+        "c_title":      "Название статьи",
+        "c_title_req":  "Из первых 10 строк документа",
         "c_lang": "Язык статьи",
-        "c_lang_req": "Определение основного языка",
+        "c_lang_req": "По названию / первым строкам",
         "c_vol": "Объём статьи",
         "c_vol_req": "≥3500 слов",
         "c_ann_ru": "Аннотация (рус)",
@@ -70,7 +70,6 @@ locales = {
         "c_fund": "§9. Финансирование",
         "c_ack": "§10. Благодарности",
         "c_conflict": "§11. Конфликты интересов",
-        # refs‑критерийлерді UI‑да қалдырсақ болады, бірақ есептелмейді
         "c_paper": "Формат бумаги",
         "c_paper_req": "A4 (210x297 мм)",
         "c_margins": "Поля",
@@ -83,8 +82,6 @@ locales = {
         "c_images_req": "Мин. 300 DPI (вручную)",
         "c_multi_ann": "Многоязычные аннотации",
         "c_multi_ann_req": "Ещё 2 аннотации на других языках",
-        "c_translit": "Транслитерация источников",
-        "c_translit_req": "Для рус/каз источников — латиница",
         "found": "Найдено",
         "not_found": "Отсутствует",
         "words": "слов",
@@ -111,10 +108,10 @@ locales = {
         "req_fix": "### ⚠️ Түзетуді қажет етеді",
         "req": "талап",
         "no_file": "👆 Тексеруді бастау үшін .docx файлын жүктеңіз",
-        "c_author": "Бірінші автордың аты-жөні",
-        "c_author_req": "Мақаланың тақырыбынан кейінгі аты-жөн",
+        "c_title":      "Мақала атауы",
+        "c_title_req":  "Құжаттың алғашқы 10 жолынан",
         "c_lang": "Мақала тілі",
-        "c_lang_req": "Негізгі тілді анықтау",
+        "c_lang_req": "Атауы / алғашқы жолдары бойынша",
         "c_vol": "Мақала көлемі",
         "c_vol_req": "≥3500 сөз",
         "c_ann_ru": "Аңдатпа (орыс)",
@@ -150,8 +147,6 @@ locales = {
         "c_images_req": "Мин. 300 DPI (қолмен тексеру)",
         "c_multi_ann": "Көптілді аңдатпалар",
         "c_multi_ann_req": "Басқа 2 тілде аңдатпа болуы керек",
-        "c_translit": "Транслитерация (дереккөздер)",
-        "c_translit_req": "Орыс/қаз дереккөздері үшін — латын",
         "found": "Табылды",
         "not_found": "Жоқ",
         "words": "сөз",
@@ -163,34 +158,11 @@ l = locales[st.session_state.lang]
 # ─── THEME CSS ─────────────────────────────────────────────────────
 dark_css = """
 <style>
-
-.stApp{
-background-color:#0d1117;
-color:#c9d1d9;
-}
-
-h1,h2,h3,h4,h5{
-color:#e6edf3!important;
-}
-
-.stMetric{
-background:#161b22;
-border:1px solid #30363d;
-color:#c9d1d9;
-padding:12px;
-border-radius:8px;
-}
-
-.stButton>button{
-background-color:#21262d;
-color:#c9d1d9;
-border:1px solid #30363d;
-}
-
-.stButton>button:hover{
-background-color:#30363d;
-}
-
+.stApp{background-color:#0d1117;color:#c9d1d9;}
+h1,h2,h3,h4,h5{color:#e6edf3!important;}
+.stMetric{background:#161b22;border:1px solid #30363d;color:#c9d1d9;padding:12px;border-radius:8px;}
+.stButton>button{background-color:#21262d;color:#c9d1d9;border:1px solid #30363d;}
+.stButton>button:hover{background-color:#30363d;}
 </style>
 """
 light_css = """
@@ -218,127 +190,93 @@ st.caption(l["subtitle"])
 st.markdown("---")
 
 # ─── HELPERS ───────────────────────────────────────────────────────
-_SKIP_PATTERNS = re.compile(
-    r"приложение|қосымша|appendix|мрнти|irsti|orcid|e-mail|аффилиация|affiliation"
-    r"|секция|section|тип статьи|мақала түрі|type of the paper"
-    r"|корреспонд|correspondence|copyright|citation|цитирование|дәйексөз"
-    r"|received|поступила|accepted|published|academic editor|vest_chem"
-    r"|beisemb|гумилева|gumilyov|doi\.org|http|https",
-    re.IGNORECASE,
-)
+_KAZ_CHARS = set("қңөұүіәғҚҢӨҰҮІӘҒ")
 
-def extract_author_and_lang(doc: Document):
+def detect_lang_from_text(text: str) -> str:
+    """Detect language by character frequency in the given text."""
+    kaz   = sum(1 for c in text if c in _KAZ_CHARS)
+    latin = sum(1 for c in text if c.isalpha() and c.isascii())
+    cyr   = sum(1 for c in text if "\u0400" <= c <= "\u04FF" and c not in _KAZ_CHARS)
+    if kaz >= 2:
+        return "kz"
+    if latin > cyr:
+        return "en"
+    return "ru"
 
-    title = None
-    author_str = None
 
-    header_pars = doc.paragraphs[:10]
+def extract_title_author_lang(doc: Document):
+    """Return (title, author_str, main_lang) using first 10 paragraphs."""
+    header_pars = [p for p in doc.paragraphs[:10] if p.text.strip()]
 
-    # ───────── TITLE (14 pt bold) ─────────
+    title      = ""
+    author_str = "to be defined"
+
+    # ── Title: bold 14 pt run ──────────────────────────────────────
     for p in header_pars:
-
-        text = p.text.strip()
-        if not text:
-            continue
-
         for r in p.runs:
-
-            if r.font.bold and r.font.size:
-
-                size = r.font.size.pt
-
-                if 13.5 <= size <= 14.5:
-                    title = text
-                    break
-
+            if r.font.bold and r.font.size and 13.5 <= r.font.size.pt <= 14.5:
+                title = p.text.strip()
+                break
         if title:
             break
 
-    # ───────── AUTHORS (12 pt bold) ─────────
+    # Fallback: first non-empty paragraph
+    if not title and header_pars:
+        title = header_pars[0].text.strip()
+
+    # ── Author: bold 12 pt run (skip title paragraph) ─────────────
     for p in header_pars:
-
-        text = p.text.strip()
-        if not text:
+        if p.text.strip() == title:
             continue
-
         for r in p.runs:
-
-            if r.font.bold and r.font.size:
-
-                size = r.font.size.pt
-
-                if 11.5 <= size <= 12.5:
-
-                    cleaned = re.sub(r"\d+[\*,]?", "", text)
-                    cleaned = re.sub(
-                        r"\s+(және|и|and)\s+",
-                        ", ",
-                        cleaned,
-                        flags=re.IGNORECASE
-                    )
-
-                    parts = [
-                        p.strip()
-                        for p in cleaned.split(",")
-                        if p.strip()
-                    ]
-
-                    if parts:
-                        author_str = parts[0]
-
-                    break
-
-        if author_str:
+            if r.font.bold and r.font.size and 11.5 <= r.font.size.pt <= 12.5:
+                cleaned = re.sub(r"\d+[\*,]?", "", p.text.strip())
+                cleaned = re.sub(r"\s+(және|и|and)\s+", ", ", cleaned, flags=re.IGNORECASE)
+                parts = [s.strip() for s in cleaned.split(",") if s.strip()]
+                if parts:
+                    author_str = parts[0]
+                break
+        if author_str != "to be defined":
             break
 
-    # ───────── FALLBACK ─────────
-    if not author_str:
-        author_str = "to be defined"
+    # ── Language: from title + first 10 lines ─────────────────────
+    sample = title + " " + " ".join(p.text for p in header_pars)
+    main_lang = detect_lang_from_text(sample)
 
+    return title, author_str, main_lang
+
+
+def title_for_filename(title: str) -> str:
     if not title:
-        title = ""
+        return "report"
+    clean = re.sub(r"[^\w\s-]", "", title, flags=re.UNICODE)
+    return clean.strip().replace(" ", "_")[:40] or "report"
 
-    # ───────── LANGUAGE DETECTION ─────────
-    title_low = title.lower()
-
-    if any(k in title_low for k in [
-        "зерттеу", "талдау", "бағалау"
-    ]):
-        main_lang = "kz"
-
-    elif any(k in title_low for k in [
-        "analysis", "assessment", "study"
-    ]):
-        main_lang = "en"
-
-    else:
-        main_lang = "ru"
-
-    return author_str, main_lang
 
 # ─── MAIN CHECK FUNCTION ───────────────────────────────────────────
 def check_article(doc: Document, l: dict):
-    full_text = "\n".join(p.text for p in doc.paragraphs)
+    full_text  = "\n".join(p.text for p in doc.paragraphs)
     word_count = len(full_text.split())
-    text_low = full_text.lower()
-    results = []
+    text_low   = full_text.lower()
+    results    = []
 
-    author_str, main_lang = extract_author_and_lang(doc)
+    title, author_str, main_lang = extract_title_author_lang(doc)
 
     def add(num, criterion, requirement, found_val, status):
         results.append({
-            "№": num,
-            "Критерий": criterion,
+            "№":         num,
+            "Критерий":  criterion,
             "Требование": requirement,
-            "Найдено": found_val,
-            "Статус": status,
+            "Найдено":   found_val,
+            "Статус":    status,
         })
 
-    # 0. Автор
-    is_author_found = "Анықталмады" not in author_str and "Не найдено" not in author_str
-    add(0, l["c_author"], l["c_author_req"], author_str, "✅" if is_author_found else "⚠️")
+    # 0. Название статьи  ← НОВЫЙ первый вывод
+    add(0, l["c_title"], l["c_title_req"],
+        title if title else l["not_found"],
+        "✅" if title else "⚠️")
 
-    # 1. Язык
+    # 1. Язык (определяется по названию / первым 10 строкам)
     lang_map = {"ru": "Русский", "kz": "Қазақша", "en": "English"}
     add(1, l["c_lang"], l["c_lang_req"], lang_map.get(main_lang, main_lang), "✅")
 
@@ -394,14 +332,14 @@ def check_article(doc: Document, l: dict):
         f"{orcid_count} ORCID",
         "✅" if orcid_count >= 1 else "⚠️")
 
-    # 9–13. Негізгі бөлімдер
+    # 9–13. Основные разделы
     sections = [
-        (9,  l["c_intro"], ["1. введение", "1. кіріспе", "1. introduction", "введение", "кіріспе", "introduction"]),
-        (10, l["c_mm"],    ["2. материалы и методы", "2. материалдар мен әдістер", "2. materials and methods",
-                            "материал", "әдістер", "materials and methods"]),
-        (11, l["c_res"],   ["3. результаты", "3. нәтижелер", "3. results", "результат", "нәтижелер", "results"]),
-        (12, l["c_disc"],  ["4. обсуждение", "4. талқылау", "4. discussion", "обсужден", "талқылау", "discussion"]),
-        (13, l["c_concl"], ["5. заключение", "5. қорытынды", "5. conclusion", "заключени", "қорытынды", "conclusion"]),
+        (9,  l["c_intro"], ["введение", "кіріспе", "introduction"]),
+        (10, l["c_mm"],    ["материалы и методы", "материалдар мен әдістер", "materials and methods",
+                            "материал", "әдістер"]),
+        (11, l["c_res"],   ["результаты", "нәтижелер", "results"]),
+        (12, l["c_disc"],  ["обсуждение", "талқылау", "discussion"]),
+        (13, l["c_concl"], ["заключение", "қорытынды", "conclusion"]),
     ]
     for num, name, keys in sections:
         found = any(k in text_low for k in keys)
@@ -410,77 +348,45 @@ def check_article(doc: Document, l: dict):
             "✅" if found else "❌")
 
     # 14–18. Доп. разделы
-    has_supp = any(k in text_low for k in ["6. вспомогательный материал", "6. қосымша материалдар",
-                                           "6. supplementary materials", "supplementary materials"])
+    has_supp = any(k in text_low for k in [
+        "вспомогательный материал", "қосымша материалдар", "supplementary materials"])
     add(14, l["c_supp"], l["c_req_obl"],
-        l["found"] if has_supp else l["not_found"],
-        "✅" if has_supp else "⚠️")
+        l["found"] if has_supp else l["not_found"], "✅" if has_supp else "⚠️")
 
     contrib = any(k in text_low for k in [
-        "7. вклады авторов", "7. вклад авторов", "7. авторлардың үлесі",
-        "7. author contributions", "вклад авторов", "author contributions",
-        "авторлық үлестер", "авторлардың үлесі"])
+        "вклад авторов", "author contributions", "авторлардың үлесі", "авторлық үлестер"])
     add(15, l["c_contrib"], "CRediT",
-        l["found"] if contrib else l["not_found"],
-        "✅" if contrib else "❌")
+        l["found"] if contrib else l["not_found"], "✅" if contrib else "❌")
 
     authinfo = any(k in text_low for k in [
-        "8. информация об авторе", "8. автор туралы ақпарат",
-        "8. author information", "информация об авторе",
-        "автор туралы ақпарат", "author information"])
+        "информация об авторе", "author information", "автор туралы ақпарат"])
     add(16, l["c_authinfo"], l["c_req_obl"],
-        l["found"] if authinfo else l["not_found"],
-        "✅" if authinfo else "⚠️")
+        l["found"] if authinfo else l["not_found"], "✅" if authinfo else "⚠️")
 
     fund = any(k in text_low for k in [
-        "9. финансирование", "9. қаржыландыру", "9. funding",
-        "финансирован", "funding", "қаржыландыру"])
+        "финансирование", "funding", "қаржыландыру"])
     add(17, l["c_fund"], l["c_req_obl"],
-        l["found"] if fund else l["not_found"],
-        "✅" if fund else "❌")
+        l["found"] if fund else l["not_found"], "✅" if fund else "❌")
 
     ack = any(k in text_low for k in [
-        "10. благодарности", "10. алғыстар", "10. acknowledgements",
-        "благодарност", "алғыстар", "acknowledgements", "acknowledgments"])
+        "благодарност", "acknowledgements", "acknowledgments", "алғыстар"])
     add(18, l["c_ack"], l["c_req_obl"],
-    l["found"] if ack else l["not_found"],
-    "✅" if ack else "⚠️")
+        l["found"] if ack else l["not_found"], "✅" if ack else "⚠️")
 
     # 19. Конфликт интересов
     conflict_patterns = [
-        r"конфликт(ы)? интерес(а|ов)",
+        r"конфликт(ы|а)? интересов",
         r"conflict(s)? of interest",
         r"мүдделер қақтығысы",
     ]
-
-    conflict = any(
-        re.search(p, full_text, re.IGNORECASE)
-        for p in conflict_patterns
-    )
-
-    add(
-        19,
-        l["c_conflict"],
-        l["c_req_obl"],
+    conflict = any(re.search(p, full_text, re.IGNORECASE) for p in conflict_patterns)
+    add(19, l["c_conflict"], l["c_req_obl"],
         l["found"] if conflict else l["not_found"],
-        "✅" if conflict else "❌",
-    )
+        "✅" if conflict else "❌")
 
-    # 20. Список литературы / References / Әдебиеттер
-    refs_patterns = [
-        r"список литературы",
-        r"references",
-        r"әдебиет(тер)? тізімі",
-    ]
-
-    ann_patterns = [
-        r"\n\s*аннотация",
-        r"\n\s*abstract",
-        r"\n\s*аңдатпа",
-    ]
-
+    # 20. Список литературы
+    refs_patterns = [r"список литературы", r"references", r"әдебиет(тер)? тізімі"]
     refs_match = None
-
     for p in refs_patterns:
         m = re.search(p, text_low)
         if m:
@@ -488,85 +394,42 @@ def check_article(doc: Document, l: dict):
             break
 
     if refs_match:
-
-        start = refs_match.end()
-
-        end = len(full_text)
-
-        for p in ann_patterns:
-            m = re.search(p, text_low[start:])
-            if m:
-                end = start + m.start()
-                break
-
-        refs_text = full_text[start:end]
-
-        # поиск нумерованных источников
-        ref_lines = re.findall(
-            r"\n\s*(\d+[\.\)]|\[\d+\])\s",
-            refs_text
-        )
-
-        # если нумерации нет — считаем длинные строки
-        if len(ref_lines) == 0:
-
-            raw_lines = refs_text.split("\n")
-
-            ref_lines = [
-                line for line in raw_lines
-                if len(line.strip()) > 40
-            ]
-
+        refs_text = full_text[refs_match.end():]
+        ref_lines = re.findall(r"\n\s*(\d+[\.\)]|\[\d+\])\s", refs_text)
+        if not ref_lines:
+            ref_lines = [ln for ln in refs_text.split("\n") if len(ln.strip()) > 40]
         ref_count = len(ref_lines)
-
-        add(
-            20,
-            "Список литературы / References",
-            "≥10 источников",
-            f"{ref_count}",
-            "✅" if ref_count >= 10 else "⚠️",
-        )
-
+        add(20, "Список литературы / References", "≥10 источников",
+            f"{ref_count}", "✅" if ref_count >= 10 else "⚠️")
     else:
+        add(20, "Список литературы / References", l["c_req_obl"], l["not_found"], "❌")
 
-        add(
-            20,
-            "Список литературы / References",
-            l["c_req_obl"],
-            l["not_found"],
-            "❌",
-        )
-    # 23–25. Формат, поля, шрифт
+    # 21–22. Формат, поля
     try:
-        sec = doc.sections[0]
+        sec  = doc.sections[0]
         w_mm = round(sec.page_width.mm)
         h_mm = round(sec.page_height.mm)
         is_a4 = (209 <= w_mm <= 211) and (296 <= h_mm <= 298)
-        add(21, l["c_paper"], l["c_paper_req"],
-            f"{w_mm}x{h_mm} мм", "✅" if is_a4 else "❌")
-        t = round(sec.top_margin.mm)
-        b = round(sec.bottom_margin.mm)
-        lf = round(sec.left_margin.mm)
-        rg = round(sec.right_margin.mm)
-        margins_ok = (t == 20 and b == 20 and lf == 20 and rg == 20)
+        add(21, l["c_paper"], l["c_paper_req"], f"{w_mm}x{h_mm} мм", "✅" if is_a4 else "❌")
+        t, b = round(sec.top_margin.mm), round(sec.bottom_margin.mm)
+        lf, rg = round(sec.left_margin.mm), round(sec.right_margin.mm)
         add(22, l["c_margins"], l["c_margins_req"],
             f"Л:{lf} П:{rg} В:{t} Н:{b} мм",
-            "✅" if margins_ok else "❌")
+            "✅" if (t == 20 and b == 20 and lf == 20 and rg == 20) else "❌")
     except Exception:
-        add(21, l["c_paper"], l["c_paper_req"], "Қате/Ошибка", "⚠️")
-        add(22, l["c_margins"], l["c_margins_req"], "Қате/Ошибка", "⚠️")
+        add(21, l["c_paper"],   l["c_paper_req"],   "Қате/Ошибка", "⚠️")
+        add(22, l["c_margins"], l["c_margins_req"],  "Қате/Ошибка", "⚠️")
 
+    # 23. Шрифт
     try:
         fn = doc.styles["Normal"].font.name or "?"
-        fs = (doc.styles["Normal"].font.size.pt
-              if doc.styles["Normal"].font.size else "?")
+        fs = doc.styles["Normal"].font.size.pt if doc.styles["Normal"].font.size else "?"
         ok_font = "Times New Roman" in str(fn) and fs in [11.0, 12.0]
-        add(23, l["c_font"], l["c_font_req"],
-            f"{fn}, {fs} pt", "✅" if ok_font else "⚠️")
+        add(23, l["c_font"], l["c_font_req"], f"{fn}, {fs} pt", "✅" if ok_font else "⚠️")
     except Exception:
         add(23, l["c_font"], l["c_font_req"], "Қате/Ошибка", "⚠️")
 
-    # 26–27. Таблицы/рисунки
+    # 24–25. Таблицы / Рисунки
     tbl_count = len(doc.tables)
     add(24, l["c_tables"], l["c_tables_req"],
         f"{tbl_count} шт.", "✅" if tbl_count > 0 else "⚠️")
@@ -575,7 +438,7 @@ def check_article(doc: Document, l: dict):
     add(25, l["c_images"], l["c_images_req"],
         f"{img_count} шт.", "⚠️" if img_count > 0 else "✅")
 
-    # 28. Многоязычные аннотации
+    # 26. Многоязычные аннотации
     if main_lang == "ru":
         ok_multi = has_kaz_ann and has_eng_ann
     elif main_lang == "kz":
@@ -586,11 +449,8 @@ def check_article(doc: Document, l: dict):
         l["found"] if ok_multi else l["not_found"],
         "✅" if ok_multi else "❌")
 
-    # 29. Транслитерация (только EN) – references блокын енді бөлек есептемейміз,
-    # бірақ қажет болса, келешекте қайта қосуға болады. Қазір транслит критерийін өшіргіңіз келсе,
-    # бұл блокты да алып тастауға болады.
+    return results, full_text, title, author_str, main_lang
 
-    return results, full_text, author_str, main_lang
 
 # ─── DOCX REPORT ──────────────────────────────────────────────────
 def build_docx_report(results, l, total, passed, warned, failed, score):
@@ -599,21 +459,20 @@ def build_docx_report(results, l, total, passed, warned, failed, score):
     d.add_heading(l["res_title"], level=1)
     p = d.add_paragraph()
     p.add_run(f"{l['total']}: {total},  ").bold = True
-    p.add_run(f"{l['passed']}: {passed},  {l['warned']}: {warned},  {l['failed']}: {failed},  {l['score']}: {score}%")
+    p.add_run(f"{l['passed']}: {passed},  {l['warned']}: {warned},  "
+              f"{l['failed']}: {failed},  {l['score']}: {score}%")
     d.add_paragraph("")
     tbl = d.add_table(rows=1, cols=5)
     for i, h in enumerate(["№", "Критерий", "Требование", "Найдено", "Статус"]):
         tbl.rows[0].cells[i].text = h
     for r in results:
         row = tbl.add_row().cells
-        row[0].text = str(r["№"])
-        row[1].text = str(r["Критерий"])
-        row[2].text = str(r["Требование"])
-        row[3].text = str(r["Найдено"])
-        row[4].text = str(r["Статус"])
+        for i, key in enumerate(["№", "Критерий", "Требование", "Найдено", "Статус"]):
+            row[i].text = str(r[key])
     d.save(buf)
     buf.seek(0)
     return buf.getvalue()
+
 
 # ─── UI ───────────────────────────────────────────────────────────
 uploaded_file = st.file_uploader(l["upload_title"], type=["docx"], help=l["upload_help"])
@@ -621,27 +480,25 @@ uploaded_file = st.file_uploader(l["upload_title"], type=["docx"], help=l["uploa
 if uploaded_file:
     with st.spinner(l["analyzing"]):
         doc = Document(uploaded_file)
-        results, full_text, author_str, main_lang = check_article(doc, l)
+        results, full_text, title, author_str, main_lang = check_article(doc, l)
         df = pd.DataFrame(results)
-    st.write([p.text for p in doc.paragraphs if "конф" in p.text.lower()])
-
 
     passed = sum(1 for r in results if r["Статус"] == "✅")
     warned = sum(1 for r in results if r["Статус"] == "⚠️")
     failed = sum(1 for r in results if r["Статус"] == "❌")
-    total = len(results)
-    score = int(passed / total * 100) if total > 0 else 0
+    total  = len(results)
+    score  = int(passed / total * 100) if total > 0 else 0
 
     st.markdown(f"## {l['res_title']}")
     c1, c2, c3, c4, c5 = st.columns(5)
-    c1.metric(l["total"], total)
+    c1.metric(l["total"],  total)
     c2.metric(l["passed"], passed)
     c3.metric(l["warned"], warned)
     c4.metric(l["failed"], failed)
-    c5.metric(l["score"], f"{score}%")
+    c5.metric(l["score"],  f"{score}%")
 
     bar_color = "#4caf50" if score >= 80 else "#ffc107" if score >= 60 else "#f44336"
-    bg_bar = "#2b2b2b" if st.session_state.theme == "dark" else "#e9ecef"
+    bg_bar    = "#2b2b2b" if st.session_state.theme == "dark" else "#e9ecef"
     st.markdown(
         f"""<div style="background:{bg_bar};border-radius:10px;height:28px;margin:8px 0 20px 0;">
           <div style="background:{bar_color};width:{score}%;height:28px;border-radius:10px;
@@ -651,36 +508,32 @@ if uploaded_file:
     )
 
     def highlight(row):
-
-    if st.session_state.theme == "dark":
-        colors = {
-            "✅": "background-color:#1f6feb33",
-            "⚠️": "background-color:#d2992233",
-            "❌": "background-color:#da363333"
-        }
-    else:
-        colors = {
-            "✅": "background-color:#d4edda",
-            "⚠️": "background-color:#fff3cd",
-            "❌": "background-color:#f8d7da"
-        }
-
-    return [colors.get(row["Статус"], "")] * len(row)
+        if st.session_state.theme == "dark":
+            colors = {
+                "✅": "background-color:#1f6feb33",
+                "⚠️": "background-color:#d2992233",
+                "❌": "background-color:#da363333",
+            }
+        else:
+            colors = {
+                "✅": "background-color:#d4edda",
+                "⚠️": "background-color:#fff3cd",
+                "❌": "background-color:#f8d7da",
+            }
+        return [colors.get(row["Статус"], "")] * len(row)
 
     st.markdown(l["det_report"])
     st.dataframe(df.style.apply(highlight, axis=1), use_container_width=True, height=900)
 
     st.markdown("---")
     col_a, col_b, col_c = st.columns(3)
-    base_name = f"compliance_{author_for_filename(author_str)}"
+    base_name = f"compliance_{title_for_filename(title)}"
 
     col_a.download_button(
         l["btn_csv"],
         df.to_csv(index=False).encode("utf-8-sig"),
-        f"{base_name}.csv",
-        "text/csv",
+        f"{base_name}.csv", "text/csv",
     )
-
     xbuf = BytesIO()
     with pd.ExcelWriter(xbuf, engine="openpyxl") as w:
         df.to_excel(w, index=False, sheet_name="Report")
@@ -689,7 +542,6 @@ if uploaded_file:
         f"{base_name}.xlsx",
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     )
-
     col_c.download_button(
         l["btn_docx"],
         build_docx_report(results, l, total, passed, warned, failed, score),
