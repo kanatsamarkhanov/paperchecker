@@ -7,13 +7,6 @@ import pandas as pd
 from io import BytesIO
 
 st.set_page_config(page_title="Article Checker / Мақала тексеру", page_icon="📋", layout="wide")
-# ── Simple counters ─────────────────────────────────────────────
-if "visits" not in st.session_state:
-    st.session_state.visits = 0         # every page load
-st.session_state.visits += 1
-
-if "real_users" not in st.session_state:
-    st.session_state.real_users = 0     # user who uploaded at least one file
 
 if "lang"  not in st.session_state: st.session_state.lang  = "kz"
 if "theme" not in st.session_state: st.session_state.theme = "light"
@@ -94,7 +87,7 @@ locales = {
     "c_tables":"Кестелер","c_tables_req":"Мәтінде болуы керек",
     "c_images":"Суреттер","c_images_req":"600 DPI, TIFF/JPEG/PNG",
     "c_multi_ann":"Көптілді аңдатпалар","c_multi_ann_req":"Басқа 2 тілде аңдатпа болуы керек",
-    "img_see_table":"жоғарыдағы кестені қараңыз",
+    "img_see_table":"төмендегі кестені қараңыз",
     "found":"Табылды","not_found":"Жоқ","words":"сөз",
     "f_author":"Канат Самарханов / Kanat Samarkhanov","f_license":"Лицензия",
     "f_univ":"Л.Н. Гумилев атындағы ЕҰУ — Физикалық және экономикалық география кафедрасы",
@@ -208,14 +201,6 @@ hc1, hc2, hc3 = st.columns([6, 1.8, 1.8])
 with hc1:
     st.title(l["title"])
     st.caption(l["subtitle"])
-    st.markdown(
-      f"<span style='font-size:12px;color:#7b96b8;'>"
-      f"Visitors: <b>{st.session_state.visits}</b> · "
-      f"Real users (uploaded file): <b>{st.session_state.real_users}</b>"
-      f"</span>",
-      unsafe_allow_html=True,
-    )
-
 with hc2:
     _lang_labels = {"kz": "🇰🇿 Қазақша", "ru": "🇷🇺 Русский", "en": "🇬🇧 English"}
     _lang_keys   = list(_lang_labels.keys())
@@ -273,15 +258,15 @@ _ANN_END = r"(?=ключевые\s+слова|keywords|түйінді\s+сөзд
 
 _ANN_PATTERNS = {
     "ru": re.compile(
-      r"[AА]ннотац[ия][\s:–-]*(.{30,}?)" + _ANN_END,
-      re.IGNORECASE | re.DOTALL,
-      ),
+        r"аннотация\s*[:\—\-]?\s*(.{30,}?)" + _ANN_END,
+        re.IGNORECASE | re.DOTALL,
+    ),
     "kz": re.compile(
-        r"аңдатпа[\s:–-]*(.{30,}?)" + _ANN_END,
+        r"аңдатпа\s*[:\—\-]?\s*(.{30,}?)" + _ANN_END,
         re.IGNORECASE | re.DOTALL,
     ),
     "en": re.compile(
-        r"[AaAА][bв][sс][tт][rр][aа][cс][tт][\s:–-]*(.{30,}?)" + _ANN_END,
+        r"\babstract\b\s*[:\—\-]?\s*(.{30,}?)" + _ANN_END,
         re.IGNORECASE | re.DOTALL,
     ),
 }
@@ -497,21 +482,14 @@ def check_article(doc, l):
     return results, full_text, title, main_lang
 
 
-def build_docx_report(results, l, total, passed, warned, failed, score, img_rows=None):
-    buf = BytesIO()
-    d = Document()
-
-    # Summary
+def build_docx_report(results, l, total, passed, warned, failed, score):
+    buf = BytesIO(); d = Document()
     d.add_heading(l["res_title"], level=1)
     p = d.add_paragraph()
     p.add_run(f"{l['total']}: {total},  ").bold = True
-    p.add_run(
-        f"{l['passed']}: {passed},  {l['warned']}: {warned},  "
-        f"{l['failed']}: {failed},  {l['score']}: {score}%"
-    )
+    p.add_run(f"{l['passed']}: {passed},  {l['warned']}: {warned},  "
+              f"{l['failed']}: {failed},  {l['score']}: {score}%")
     d.add_paragraph("")
-
-    # Main criteria table
     tbl = d.add_table(rows=1, cols=5)
     for i, h in enumerate(["#", "Criterion", "Requirement", "Found", "Status"]):
         tbl.rows[0].cells[i].text = h
@@ -519,28 +497,7 @@ def build_docx_report(results, l, total, passed, warned, failed, score, img_rows
         row = tbl.add_row().cells
         for i, k in enumerate(["№", "Критерий", "Требование", "Найдено", "Статус"]):
             row[i].text = str(r.get(k, ""))
-
-    # Optional image table
-    if img_rows:
-        d.add_page_break()
-        d.add_heading(l["img_report"], level=2)
-        cols = [
-            l["img_num"], l["img_pixels"], l["img_size_mm"],
-            l["img_dpi_calc"], l["img_dpi_emb"], l["img_dpi_real"],
-            l["img_format"], l["img_status"],
-        ]
-        t2 = d.add_table(rows=1, cols=len(cols))
-        for i, h in enumerate(cols):
-            t2.rows[0].cells[i].text = h
-        for row_data in img_rows:
-            row = t2.add_row().cells
-            for i, key in enumerate(cols):
-                row[i].text = str(row_data.get(key, ""))
-
-    d.save(buf)
-    buf.seek(0)
-    return buf.getvalue()
-
+    d.save(buf); buf.seek(0); return buf.getvalue()
 
 _ST   = {"✅": "background-color:#dafbe1;color:#1a7f37;font-weight:500",
          "⚠️": "background-color:#fff8c5;color:#7d4e00;font-weight:500",
@@ -550,13 +507,6 @@ _BASE = "background-color:#f6f8fa;color:#1f2328"
 uploaded_file = st.file_uploader(l["upload_title"], type=["docx"], help=l["upload_help"])
 
 if uploaded_file:
-    if "counted_real_user" not in st.session_state:
-        st.session_state.counted_real_user = False
-
-    if not st.session_state.counted_real_user:
-        st.session_state.real_users += 1
-        st.session_state.counted_real_user = True
-
     with st.spinner(l["analyzing"]):
         doc      = Document(uploaded_file)
         results, full_text, title, main_lang = check_article(doc, l)
@@ -624,12 +574,10 @@ if uploaded_file:
         if img_rows: pd.DataFrame(img_rows).to_excel(w, index=False, sheet_name="Images")
     cb.download_button(l["btn_xls"], xb.getvalue(), f"{bn}.xlsx",
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-    cc.download_button(
-      l["btn_docx"],
-      build_docx_report(results, l, total, passed, warned, failed, score, img_rows),
-      f"{bn}.docx",
-      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    )
+    cc.download_button(l["btn_docx"],
+        build_docx_report(results, l, total, passed, warned, failed, score),
+        f"{bn}.docx",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
 
     problems = [r for r in results if r["Статус"] in ("❌", "⚠️")]
     if problems:
@@ -644,47 +592,17 @@ else:
 
 fc  = "#7b96b8" if st.session_state.theme == "dark" else "#555"
 flk = "#58a6ff"  if st.session_state.theme == "dark" else "#0969da"
-
 st.markdown("---")
-wa_link = "https://wa.me/77027341260"
-
 st.markdown(
-    f'''
-    <div style="text-align:center;font-size:12px;color:{fc};
-                padding:12px 0 20px 0;line-height:2.2;">
-
-      <a href="{wa_link}" target="_blank" style="text-decoration:none;">
-        <div style="
-             display:inline-flex;
-             align-items:center;
-             justify-content:center;
-             padding:6px 14px;
-             border-radius:999px;
-             background-color:#25D366;
-             color:white;
-             font-weight:600;
-             font-size:11px;
-             box-shadow:0 1px 3px rgba(0,0,0,0.25);
-             margin-bottom:10px;
-        ">
-          💬 WhatsApp
-        </div>
-      </a><br>
-
-      <b style="font-size:13px;">© 2025 {l["f_author"]}</b><br>
-      📧 <a href="mailto:samarkhanov_kb@enu.kz"
-            style="color:{flk};text-decoration:none;">samarkhanov_kb@enu.kz</a>
-      &nbsp;·&nbsp;
-      <a href="mailto:kanat.baurzhanuly@gmail.com"
-         style="color:{flk};text-decoration:none;">kanat.baurzhanuly@gmail.com</a><br>
-      🏛️ <a href="https://fns.enu.kz/kz/page/departments/physical-and-economical-geography/faculty-members"
-             target="_blank" style="color:{flk};text-decoration:none;">{l["f_univ"]}</a><br>
-      📄 {l["f_license"]}:&nbsp;
-      <a href="https://creativecommons.org/licenses/by/4.0/"
-         target="_blank" style="color:{flk};text-decoration:none;">
-         CC BY 4.0 — Creative Commons Attribution 4.0 International
-      </a>
-    </div>
-    ''',
-    unsafe_allow_html=True,
-)
+    f'<div style="text-align:center;font-size:12px;color:{fc};padding:12px 0 20px 0;line-height:2.2;">'
+    f'<b style="font-size:13px;">© 2025 {l["f_author"]}</b><br>'
+    f'📧 <a href="mailto:samarkhanov_kb@enu.kz" style="color:{flk};text-decoration:none;">samarkhanov_kb@enu.kz</a>'
+    f'&nbsp;·&nbsp;'
+    f'<a href="mailto:kanat.baurzhanuly@gmail.com" style="color:{flk};text-decoration:none;">kanat.baurzhanuly@gmail.com</a><br>'
+    f'🏛️ <a href="https://fns.enu.kz/kz/page/departments/physical-and-economical-geography/faculty-members"'
+    f'     target="_blank" style="color:{flk};text-decoration:none;">{l["f_univ"]}</a><br>'
+    f'📄 {l["f_license"]}:&nbsp;'
+    f'<a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" style="color:{flk};text-decoration:none;">'
+    f'CC BY 4.0 — Creative Commons Attribution 4.0 International</a>'
+    f'</div>',
+    unsafe_allow_html=True)
