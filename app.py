@@ -40,7 +40,7 @@ locales = {
     "tbl_capabove":"Подпись над таблицей",
     "tbl_headbold":"Заголовки жирные",
     "btn_csv":"⬇️ Скачать CSV","btn_xls":"⬇️ Скачать Excel","btn_docx":"⬇️ Word (DOCX)",
-    "btn_csv_fig":"⬇️ CSV (рисунки)","btn_csv_tbl":"⬇️ CSV (таблицы)",
+    "btn_csv_fig":"⬇️ CSV (рисунки)","btn_csv_tbl":"⬇️ CSV (кестелер)",
     "req_fix":"### ⚠️ Требует исправления","req":"требование",
     "no_file":"👆 Загрузите .docx файл, чтобы начать проверку",
     "c_title":"Наименование статьи","c_title_req":"Строки 3–4 документа",
@@ -71,6 +71,8 @@ locales = {
     "found":"Найдено","not_found":"Отсутствует","words":"слов",
     "fig_phrase_title":"Подписи рисунков в тексте",
     "tbl_phrase_title":"Подписи таблиц в тексте",
+    "phrase_col":"Фраза",
+    "count_col":"Повторений",
     "f_author":"Канат Самарханов / Kanat Samarkhanov","f_license":"Лицензия",
     "f_univ":"ЕНУ им. Л.Н. Гумилева — Кафедра физической и экономической географии",
   },
@@ -132,6 +134,8 @@ locales = {
     "found":"Табылды","not_found":"Жоқ","words":"сөз",
     "fig_phrase_title":"Мәтіндегі сурет жазулары",
     "tbl_phrase_title":"Мәтіндегі кесте жазулары",
+    "phrase_col":"Сөз тіркесі",
+    "count_col":"Қайталау саны",
     "f_author":"Канат Самарханов / Kanat Samarkhanov","f_license":"Лицензия",
     "f_univ":"Л.Н. Гумилев атындағы ЕҰУ — Физикалық және экономикалық география кафедрасы",
   },
@@ -145,7 +149,7 @@ locales = {
     "total":"Total","passed":"✅ Passed","warned":"⚠️ Warning",
     "failed":"❌ Failed","score":"🏆 Score",
     "det_report":"### 📋 Detailed Report",
-    "img_report":"### 🖼️ Figure Analysis",
+    "img_report":"### 🖼️ Figure Quality",
     "img_num":"No.","img_pixels":"Pixels","img_size_mm":"Size in doc",
     "img_dpi_calc":"DPI (calc.)","img_dpi_emb":"DPI (emb.)","img_dpi_real":"Real DPI",
     "img_format":"Format","img_status":"Status",
@@ -193,12 +197,15 @@ locales = {
     "found":"Found","not_found":"Not found","words":"words",
     "fig_phrase_title":"Figure caption phrases in text",
     "tbl_phrase_title":"Table caption phrases in text",
+    "phrase_col":"Phrase",
+    "count_col":"Count",
     "f_author":"Kanat Samarkhanov","f_license":"License",
     "f_univ":"L.N. Gumilyov ENU — Department of Physical and Economic Geography",
   },
 }
 l = locales[st.session_state.lang]
 
+# ------------ THEME ------------
 dark_css = (
     "<style>"
     "html,body,[class*='css'],.stApp{background-color:#0d1b2e !important;color:#c9d8ee !important;"
@@ -259,8 +266,6 @@ light_css = (
 
 st.markdown(dark_css if st.session_state.theme == "dark" else light_css, unsafe_allow_html=True)
 
-_DB_CARD="#0f2340"; _DB_HEAD="#e2edf7"; _DB_MUTED="#7b96b8"
-
 hc1, hc2, hc3 = st.columns([6, 1.8, 1.8])
 with hc1:
     st.title(l["title"])
@@ -316,7 +321,7 @@ def has_conflict_section(doc, full_text):
         if _CONFLICT_RE.search(par.text): return True
     return False
 
-# ── Abstract extraction ───────────────────────────────────────────────────
+# --------- Abstracts ----------
 _ANN_END = r"(?=ключевые\s+слова|keywords|түйінді\s+сөздер|түйін\s+сөздер|введение|кіріспе|introduction|\Z)"
 
 _ANN_PATTERNS = {
@@ -343,11 +348,121 @@ def extract_abstract(full_text, lang, region=None):
         return m.group(2).strip()
     return m.group(1).strip()
 
-# ── Figure / Table phrases in text ────────────────────────────────────────
+# ------------- Images (quality) -------------
+_ALLOWED_FORMATS = {"TIFF", "JPEG", "PNG"}
+_MIN_DPI = 600
+
+def _yes_no(val, lang_code):
+    if lang_code == "ru": return "Да" if val else "Нет"
+    if lang_code == "kz": return "Иә" if val else "Жоқ"
+    return "Yes" if val else "No"
+
+def analyse_image_quality(doc, l):
+    EMU = 914400
+    img_rows = []
+    lang_code = st.session_state.lang
+    paras = list(doc.paragraphs)
+
+    # ссылки на фигуры в тексте
+    full_text = "\n".join(p.text for p in doc.paragraphs)
+    ref_re = re.compile(r"\b(Figure|Fig\.?|Сурет|Рисунок)\s+(\d+)\b", re.IGNORECASE)
+    fig_refs = {}
+    for m in ref_re.finditer(full_text):
+        num = int(m.group(2))
+        fig_refs[num] = fig_refs.get(num, 0) + 1
+
+    # паттерн подписи: Figure 1. / Сурет 1. / Рисунок 1.
+    caption_re = re.compile(r"^\s*(Figure|Сурет|Рисунок)\s+(\d+)\s*\.", re.IGNORECASE)
+
+    for idx, shape in enumerate(doc.inline_shapes):
+        w_in = (shape.width or 0) / EMU
+        h_in = (shape.height or 0) / EMU
+        w_cm = round(w_in * 2.54, 2) if w_in > 0 else None
+        h_cm = round(h_in * 2.54, 2) if h_in > 0 else None
+        size_mm = f"{round(w_in*25.4)}x{round(h_in*25.4)} mm" if w_in > 0 else "-"
+
+        # ищем параграф с inline_shape, подпись ниже
+        par_idx = None
+        for pi, p in enumerate(paras):
+            if shape._inline in p._p:
+                par_idx = pi
+                break
+
+        caption = ""
+        label_num = None
+        cap_bold = False
+        is_composite = False
+
+        if par_idx is not None and par_idx + 1 < len(paras):
+            cap_par = paras[par_idx+1]
+            cap_text = cap_par.text.strip()
+            caption = cap_text
+            m_cap = caption_re.search(cap_text)
+            if m_cap:
+                label_num = int(m_cap.group(2))
+            for run in cap_par.runs:
+                if run.text.strip() and run.bold:
+                    cap_bold = True
+                    break
+
+        if label_num is None:
+            label_num = idx + 1
+        if not caption:
+            is_composite = True
+
+        try:
+            pic  = shape._inline.graphic.graphicData.pic
+            rId  = pic.blipFill.blip.get(qn("r:embed"))
+            blob = doc.part.related_parts[rId].blob
+            img  = Image.open(BytesIO(blob))
+            px_w, px_h = img.size
+            dw = round(px_w / w_in) if w_in > 0 else None
+            dh = round(px_h / h_in) if h_in > 0 else None
+            dpi_calc = f"{dw}x{dh}" if dw else "-"
+            emb = img.info.get("dpi")
+            dpi_emb = f"{round(emb[0])}x{round(emb[1])}" if emb else "-"
+            fmt = (img.format or "?").upper()
+            fmt_ok = fmt in _ALLOWED_FORMATS
+            dpi_ok = isinstance(dw, int) and dw >= _MIN_DPI
+            if fmt_ok and dpi_ok:
+                status = "✅"
+            elif not fmt_ok and not dpi_ok:
+                status = "❌"
+            else:
+                status = "⚠️"
+            real_dpi = dw if dw else (round(emb[0]) if emb else None)
+            real_dpi_str = str(real_dpi) if real_dpi else "-"
+        except Exception:
+            px_w = px_h = 0
+            dpi_calc = dpi_emb = real_dpi_str = fmt = "-"
+            status = "⚠️"
+
+        ref_count = fig_refs.get(label_num, 0)
+
+        img_rows.append({
+            l["img_num"]: idx + 1,
+            l["img_label"]: f"Figure {label_num}",
+            l["img_pixels"]: f"{px_w}x{px_h}" if px_w and px_h else "-",
+            l["img_size_mm"]: size_mm,
+            l["img_width"]:  f"{w_cm}" if w_cm else "-",
+            l["img_height"]: f"{h_cm}" if h_cm else "-",
+            l["img_dpi_calc"]: dpi_calc,
+            l["img_dpi_emb"]: dpi_emb,
+            l["img_dpi_real"]: real_dpi_str,
+            l["img_format"]: fmt,
+            l["img_caption"]: caption or l["not_found"],
+            l["img_ref"]: ref_count,
+            l["img_composite"]: _yes_no(is_composite, lang_code),
+            l["img_capbold"]: _yes_no(cap_bold, lang_code),
+            l["img_status"]: status,
+        })
+    return img_rows
+
+# ---------- Figure/Table phrases with counts ----------
 def extract_figure_table_phrases(full_text, l):
     lines = full_text.splitlines()
-    fig_set = set()
-    tbl_set = set()
+    fig_counts = {}
+    tbl_counts = {}
 
     fig_start_re = re.compile(r"^\s*(Figure|Рисунок|Сурет)\b", re.IGNORECASE)
     tbl_start_re = re.compile(r"^\s*(Table|Таблица|Кесте)\b", re.IGNORECASE)
@@ -357,15 +472,15 @@ def extract_figure_table_phrases(full_text, l):
         if not text:
             continue
         if fig_start_re.match(text):
-            part = text.split(".")[0].strip()
-            fig_set.add(part)
+            phrase = text.split(".")[0].strip()
+            fig_counts[phrase] = fig_counts.get(phrase, 0) + 1
         if tbl_start_re.match(text):
-            part = text.split(".")[0].strip()
-            tbl_set.add(part)
+            phrase = text.split(".")[0].strip()
+            tbl_counts[phrase] = tbl_counts.get(phrase, 0) + 1
 
-    fig_phrases = sorted(fig_set)
-    tbl_phrases = sorted(tbl_set)
-    return fig_phrases, tbl_phrases
+    fig_rows = [{"Phrase": p, "Count": c} for p, c in sorted(fig_counts.items())]
+    tbl_rows = [{"Phrase": p, "Count": c} for p, c in sorted(tbl_counts.items())]
+    return fig_rows, tbl_rows
 
 def detect_author_count(doc, orcid_count):
     if orcid_count >= 1: return orcid_count
@@ -555,7 +670,8 @@ def check_article(doc, l):
 
     return results, full_text, title, main_lang
 
-def build_docx_report(results, l, total, passed, warned, failed, score):
+def build_docx_report(results, l, total, passed, warned, failed, score,
+                      img_rows=None):
     buf = BytesIO()
     d = Document()
 
@@ -576,6 +692,18 @@ def build_docx_report(results, l, total, passed, warned, failed, score):
         for i, k in enumerate(["№", "Критерий", "Требование", "Найдено", "Статус"]):
             row[i].text = str(r.get(k, ""))
 
+    if img_rows:
+        d.add_page_break()
+        d.add_heading(l["img_report"], level=2)
+        cols = list(img_rows[0].keys())
+        t2 = d.add_table(rows=1, cols=len(cols))
+        for i, h in enumerate(cols):
+            t2.rows[0].cells[i].text = h
+        for row_data in img_rows:
+            row = t2.add_row().cells
+            for i, key in enumerate(cols):
+                row[i].text = str(row_data.get(key, ""))
+
     d.save(buf)
     buf.seek(0)
     return buf.getvalue()
@@ -592,7 +720,8 @@ if uploaded_file:
         doc      = Document(uploaded_file)
         results, full_text, title, main_lang = check_article(doc, l)
         df       = pd.DataFrame(results)
-        fig_phrases, tbl_phrases = extract_figure_table_phrases(full_text, l)
+        img_rows = analyse_image_quality(doc, l)
+        fig_rows, tbl_rows = extract_figure_table_phrases(full_text, l)
 
     passed = sum(1 for r in results if r["Статус"] == "✅")
     warned = sum(1 for r in results if r["Статус"] == "⚠️")
@@ -626,23 +755,35 @@ if uploaded_file:
         column_config={"№": st.column_config.NumberColumn(width="small")},
     )
 
-    # блок с фразами для рисунков/таблиц
+    # качество рисунков
+    if img_rows:
+        st.markdown(l["img_report"])
+        df_img = pd.DataFrame(img_rows)
+        status_col = l["img_status"]
+        def hl_img(row): return [_ST.get(row[status_col], _BASE)] * len(row)
+        st.dataframe(
+            df_img.style.apply(hl_img, axis=1),
+            use_container_width=True,
+        )
+
+    # фразы для рисунков/таблиц
     st.markdown("### 🖼️/📊 " + l["fig_phrase_title"] + " / " + l["tbl_phrase_title"])
     col_f, col_t = st.columns(2)
+    if fig_rows:
+        df_fig = pd.DataFrame(fig_rows)
+        df_fig = df_fig.rename(columns={"Phrase": l["phrase_col"], "Count": l["count_col"]})
+    if tbl_rows:
+        df_tbl = pd.DataFrame(tbl_rows)
+        df_tbl = df_tbl.rename(columns={"Phrase": l["phrase_col"], "Count": l["count_col"]})
+
     with col_f:
-        st.markdown(f"**Figure / Рисунок / Сурет** — {len(fig_phrases)}")
-        if fig_phrases:
-            st.dataframe(
-                pd.DataFrame({"Phrase": fig_phrases}),
-                use_container_width=True,
-            )
+        st.markdown(f"**Figure / Рисунок / Сурет** — {len(fig_rows)}")
+        if fig_rows:
+            st.dataframe(df_fig, use_container_width=True)
     with col_t:
-        st.markdown(f"**Table / Таблица / Кесте** — {len(tbl_phrases)}")
-        if tbl_phrases:
-            st.dataframe(
-                pd.DataFrame({"Phrase": tbl_phrases}),
-                use_container_width=True,
-            )
+        st.markdown(f"**Table / Таблица / Кесте** — {len(tbl_rows)}")
+        if tbl_rows:
+            st.dataframe(df_tbl, use_container_width=True)
 
     st.markdown("---")
     ca, cb, cc = st.columns(3)
@@ -658,6 +799,12 @@ if uploaded_file:
     xb = BytesIO()
     with pd.ExcelWriter(xb, engine="openpyxl") as w:
         df.to_excel(w, index=False, sheet_name="Report")
+        if img_rows:
+            pd.DataFrame(img_rows).to_excel(w, index=False, sheet_name="Images")
+        if fig_rows:
+            pd.DataFrame(fig_rows).to_excel(w, index=False, sheet_name="FigurePhrases")
+        if tbl_rows:
+            pd.DataFrame(tbl_rows).to_excel(w, index=False, sheet_name="TablePhrases")
     cb.download_button(
         l["btn_xls"],
         xb.getvalue(),
@@ -667,7 +814,7 @@ if uploaded_file:
 
     cc.download_button(
         l["btn_docx"],
-        build_docx_report(results, l, total, passed, warned, failed, score),
+        build_docx_report(results, l, total, passed, warned, failed, score, img_rows),
         f"{bn}.docx",
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     )
