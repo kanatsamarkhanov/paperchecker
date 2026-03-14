@@ -22,7 +22,8 @@ locales = {
     "analyzing":"Анализируем статью...","res_title":"📊 Результаты проверки",
     "total":"Всего","passed":"✅ Выполнено","warned":"⚠️ Внимание",
     "failed":"❌ Не выпол.","score":"🏆 Соответствие",
-    "det_report":"### 📋 Детальный отчёт","img_report":"### 🖼️ Анализ рисунков",
+    "det_report":"### 📋 Детальный отчёт",
+    "img_report":"### 🖼️ Анализ рисунков",
     "img_num":"№","img_pixels":"Пиксели","img_size_mm":"Размер в doc",
     "img_dpi_calc":"DPI (расч.)","img_dpi_emb":"DPI (встр.)","img_dpi_real":"DPI реальный",
     "img_format":"Формат","img_status":"Статус",
@@ -68,6 +69,8 @@ locales = {
     "c_ref_age_req_prefix":"Годы ≥ ",
     "img_see_table":"см. таблицу ниже",
     "found":"Найдено","not_found":"Отсутствует","words":"слов",
+    "fig_phrase_title":"Подписи рисунков в тексте",
+    "tbl_phrase_title":"Подписи таблиц в тексте",
     "f_author":"Канат Самарханов / Kanat Samarkhanov","f_license":"Лицензия",
     "f_univ":"ЕНУ им. Л.Н. Гумилева — Кафедра физической и экономической географии",
   },
@@ -80,7 +83,8 @@ locales = {
     "analyzing":"Мақала талдануда...","res_title":"📊 Тексеру нәтижелері",
     "total":"Барлығы","passed":"✅ Орындалды","warned":"⚠️ Назар аударыңыз",
     "failed":"❌ Орындалмады","score":"🏆 Сәйкестік",
-    "det_report":"### 📋 Толық есеп","img_report":"### 🖼️ Суреттерді талдау",
+    "det_report":"### 📋 Толық есеп",
+    "img_report":"### 🖼️ Суреттерді талдау",
     "img_num":"№","img_pixels":"Пикселдер","img_size_mm":"Doc өлшемі",
     "img_dpi_calc":"DPI (есепт.)","img_dpi_emb":"DPI (енгіз.)","img_dpi_real":"Нақты DPI",
     "img_format":"Формат","img_status":"Статус",
@@ -126,6 +130,8 @@ locales = {
     "c_ref_age_req_prefix":"Жылдар ≥ ",
     "img_see_table":"төмендегі кестені қараңыз",
     "found":"Табылды","not_found":"Жоқ","words":"сөз",
+    "fig_phrase_title":"Мәтіндегі сурет жазулары",
+    "tbl_phrase_title":"Мәтіндегі кесте жазулары",
     "f_author":"Канат Самарханов / Kanat Samarkhanov","f_license":"Лицензия",
     "f_univ":"Л.Н. Гумилев атындағы ЕҰУ — Физикалық және экономикалық география кафедрасы",
   },
@@ -138,7 +144,8 @@ locales = {
     "analyzing":"Analysing article...","res_title":"📊 Compliance Results",
     "total":"Total","passed":"✅ Passed","warned":"⚠️ Warning",
     "failed":"❌ Failed","score":"🏆 Score",
-    "det_report":"### 📋 Detailed Report","img_report":"### 🖼️ Figure Analysis",
+    "det_report":"### 📋 Detailed Report",
+    "img_report":"### 🖼️ Figure Analysis",
     "img_num":"No.","img_pixels":"Pixels","img_size_mm":"Size in doc",
     "img_dpi_calc":"DPI (calc.)","img_dpi_emb":"DPI (emb.)","img_dpi_real":"Real DPI",
     "img_format":"Format","img_status":"Status",
@@ -184,6 +191,8 @@ locales = {
     "c_ref_age_req_prefix":"Years ≥ ",
     "img_see_table":"see table below",
     "found":"Found","not_found":"Not found","words":"words",
+    "fig_phrase_title":"Figure caption phrases in text",
+    "tbl_phrase_title":"Table caption phrases in text",
     "f_author":"Kanat Samarkhanov","f_license":"License",
     "f_univ":"L.N. Gumilyov ENU — Department of Physical and Economic Geography",
   },
@@ -312,198 +321,51 @@ _ANN_END = r"(?=ключевые\s+слова|keywords|түйінді\s+сөзд
 
 _ANN_PATTERNS = {
     "ru": re.compile(
-        r"аннотация\s*[:\—\-]?\s*(.{30,}?)" + _ANN_END,
-        re.IGNORECASE | re.DOTALL,
+        r"\bаннотац(ия|ия\.)\b[\s:–-]*([\s\S]{30,}?)" + _ANN_END,
+        re.IGNORECASE,
     ),
     "kz": re.compile(
-        r"аңдатпа\s*[:\—\-]?\s*(.{30,}?)" + _ANN_END,
-        re.IGNORECASE | re.DOTALL,
+        r"\bаңдатпа\b[\s:–-]*([\s\S]{30,}?)" + _ANN_END,
+        re.IGNORECASE,
     ),
     "en": re.compile(
-        r"\babstract\b\s*[:\—\-]?\s*(.{30,}?)" + _ANN_END,
-        re.IGNORECASE | re.DOTALL,
+        r"\babstract\b[\s:–-]*([\s\S]{30,}?)" + _ANN_END,
+        re.IGNORECASE,
     ),
 }
 
 def extract_abstract(full_text, lang, region=None):
     txt = full_text
     m = _ANN_PATTERNS[lang].search(txt)
-    return m.group(1).strip() if m else None
+    if not m:
+        return None
+    if lang == "ru":
+        return m.group(2).strip()
+    return m.group(1).strip()
 
-# ── Image & table analysis ────────────────────────────────────────────────
-_ALLOWED_FORMATS = {"TIFF", "JPEG", "PNG"}
-_MIN_DPI = 600
+# ── Figure / Table phrases in text ────────────────────────────────────────
+def extract_figure_table_phrases(full_text, l):
+    lines = full_text.splitlines()
+    fig_set = set()
+    tbl_set = set()
 
-_CAPTION_FIG_RE = re.compile(
-    r"^\s*(Figure|Сурет|Рисунок)\s+(\d+)\s*\.", re.IGNORECASE | re.MULTILINE
-)
-_CAPTION_TBL_RE = re.compile(
-    r"^\s*(Table|Кесте|Таблица)\s+(\d+)\s*\.", re.IGNORECASE | re.MULTILINE
-)
+    fig_start_re = re.compile(r"^\s*(Figure|Рисунок|Сурет)\b", re.IGNORECASE)
+    tbl_start_re = re.compile(r"^\s*(Table|Таблица|Кесте)\b", re.IGNORECASE)
 
-_REF_FIG_RE = re.compile(
-    r"\b(Figure|Fig\.?|Сурет|Рисунок)\s+(\d+)\b", re.IGNORECASE
-)
-_REF_TBL_RE = re.compile(
-    r"\b(Table|Таблица|Табл\.?|Кесте)\s+(\d+)\b", re.IGNORECASE
-)
+    for line in lines:
+        text = line.strip()
+        if not text:
+            continue
+        if fig_start_re.match(text):
+            part = text.split(".")[0].strip()
+            fig_set.add(part)
+        if tbl_start_re.match(text):
+            part = text.split(".")[0].strip()
+            tbl_set.add(part)
 
-def _yes_no(val, lang_code):
-    if lang_code == "ru":
-        return "Да" if val else "Нет"
-    if lang_code == "kz":
-        return "Иә" if val else "Жоқ"
-    return "Yes" if val else "No"
-
-def analyse_figures_and_tables(doc, full_text, l):
-    EMU = 914400
-    img_rows = []
-    tables_rows = []
-
-    fig_refs = {}
-    for m in _REF_FIG_RE.finditer(full_text):
-        num = int(m.group(2))
-        fig_refs[num] = fig_refs.get(num, 0) + 1
-
-    tbl_refs = {}
-    for m in _REF_TBL_RE.finditer(full_text):
-        num = int(m.group(2))
-        tbl_refs[num] = tbl_refs.get(num, 0) + 1
-
-    paras = list(doc.paragraphs)
-    lang_code = st.session_state.lang
-
-    # рисунки
-    for idx, shape in enumerate(doc.inline_shapes):
-        w_in = (shape.width or 0) / EMU
-        h_in = (shape.height or 0) / EMU
-        w_cm = round(w_in * 2.54, 2) if w_in > 0 else None
-        h_cm = round(h_in * 2.54, 2) if h_in > 0 else None
-        size_mm = f"{round(w_in*25.4)}x{round(h_in*25.4)} mm" if w_in > 0 else "-"
-
-        par_idx = None
-        for pi, p in enumerate(paras):
-            if shape._inline in p._p:
-                par_idx = pi
-                break
-
-        caption = ""
-        label_num = None
-        cap_bold = False
-        is_composite = False
-
-        if par_idx is not None and par_idx + 1 < len(paras):
-            cap_par = paras[par_idx+1]
-            cap_text = cap_par.text.strip()
-            caption = cap_text
-            m_cap = _CAPTION_FIG_RE.search(cap_text)
-            if m_cap:
-                label_num = int(m_cap.group(2))
-            for run in cap_par.runs:
-                if run.text.strip() and run.bold:
-                    cap_bold = True
-                    break
-
-        if label_num is None:
-            label_num = idx + 1
-        if not caption:
-            is_composite = True
-
-        try:
-            pic  = shape._inline.graphic.graphicData.pic
-            rId  = pic.blipFill.blip.get(qn("r:embed"))
-            blob = doc.part.related_parts[rId].blob
-            img  = Image.open(BytesIO(blob))
-            px_w, px_h = img.size
-            dw = round(px_w / w_in) if w_in > 0 else None
-            dh = round(px_h / h_in) if h_in > 0 else None
-            dpi_calc = f"{dw}x{dh}" if dw else "-"
-            emb = img.info.get("dpi")
-            dpi_emb = f"{round(emb[0])}x{round(emb[1])}" if emb else "-"
-            fmt = (img.format or "?").upper()
-            fmt_ok = fmt in _ALLOWED_FORMATS
-            dpi_ok = isinstance(dw, int) and dw >= _MIN_DPI
-            if fmt_ok and dpi_ok:
-                status = "✅"
-            elif not fmt_ok and not dpi_ok:
-                status = "❌"
-            else:
-                status = "⚠️"
-            real_dpi = dw if dw else (round(emb[0]) if emb else None)
-            real_dpi_str = str(real_dpi) if real_dpi else "-"
-        except Exception:
-            px_w = px_h = 0
-            dpi_calc = dpi_emb = real_dpi_str = fmt = "-"
-            status = "⚠️"
-
-        ref_count = fig_refs.get(label_num, 0)
-
-        img_rows.append({
-            l["img_num"]: idx + 1,
-            l["img_label"]: f"Figure {label_num}",
-            l["img_pixels"]: f"{px_w}x{px_h}" if px_w and px_h else "-",
-            l["img_size_mm"]: size_mm,
-            l["img_width"]:  f"{w_cm}" if w_cm else "-",
-            l["img_height"]: f"{h_cm}" if h_cm else "-",
-            l["img_dpi_calc"]: dpi_calc,
-            l["img_dpi_emb"]: dpi_emb,
-            l["img_dpi_real"]: real_dpi_str,
-            l["img_format"]: fmt,
-            l["img_caption"]: caption or l["not_found"],
-            l["img_ref"]: ref_count,
-            l["img_composite"]: _yes_no(is_composite, lang_code),
-            l["img_capbold"]: _yes_no(cap_bold, lang_code),
-            l["img_status"]: status,
-        })
-
-    # таблицы
-    for t_idx, table in enumerate(doc.tables, start=1):
-        cap = ""
-        tbl_par_idx = None
-        for pi, p in enumerate(paras):
-            if table._tbl in p._p:
-                tbl_par_idx = pi
-                break
-        caption_above = False
-        header_bold_ok = True
-
-        if tbl_par_idx is not None and tbl_par_idx > 0:
-            tx = paras[tbl_par_idx-1].text.strip()
-            if tx:
-                cap = tx
-                caption_above = True
-
-        m_cap = _CAPTION_TBL_RE.search(cap) if cap else None
-        tnum = int(m_cap.group(2)) if m_cap else t_idx
-        ref_count = tbl_refs.get(tnum, 0)
-
-        if table.rows:
-            header_row = table.rows[0]
-            for cell in header_row.cells:
-                cell_text = cell.text.strip()
-                if not cell_text:
-                    continue
-                any_bold = False
-                for p in cell.paragraphs:
-                    for r in p.runs:
-                        if r.text.strip() and r.bold:
-                            any_bold = True
-                            break
-                    if any_bold:
-                        break
-                if not any_bold:
-                    header_bold_ok = False
-                    break
-
-        tables_rows.append({
-            l["tbl_label"]: f"Table {tnum}",
-            l["tbl_caption"]: cap or l["not_found"],
-            l["tbl_ref"]: ref_count,
-            l["tbl_capabove"]: _yes_no(caption_above, lang_code),
-            l["tbl_headbold"]: _yes_no(header_bold_ok, lang_code),
-        })
-
-    return img_rows, tables_rows
+    fig_phrases = sorted(fig_set)
+    tbl_phrases = sorted(tbl_set)
+    return fig_phrases, tbl_phrases
 
 def detect_author_count(doc, orcid_count):
     if orcid_count >= 1: return orcid_count
@@ -625,7 +487,6 @@ def check_article(doc, l):
     else:
         add(20, "References / Список литературы", l["c_req_obl"], l["not_found"], "❌")
 
-    # 26 уже добавлен ниже; сначала бумага/поля/шрифт/таблицы/рисунки/многоязычие
     try:
         sec   = doc.sections[0]
         w_mm  = round(sec.page_width.mm); h_mm = round(sec.page_height.mm)
@@ -658,7 +519,6 @@ def check_article(doc, l):
     add(26, l["c_multi_ann"], l["c_multi_ann_req"],
         l["found"] if ok_multi else l["not_found"], "✅" if ok_multi else "❌")
 
-    # 27–28: APA и давность источников
     CURRENT_YEAR = datetime.datetime.now().year
     min_year = max_year = None
     yrs_ok = True
@@ -695,8 +555,7 @@ def check_article(doc, l):
 
     return results, full_text, title, main_lang
 
-def build_docx_report(results, l, total, passed, warned, failed, score,
-                      img_rows=None, tables_rows=None):
+def build_docx_report(results, l, total, passed, warned, failed, score):
     buf = BytesIO()
     d = Document()
 
@@ -717,30 +576,6 @@ def build_docx_report(results, l, total, passed, warned, failed, score,
         for i, k in enumerate(["№", "Критерий", "Требование", "Найдено", "Статус"]):
             row[i].text = str(r.get(k, ""))
 
-    if img_rows:
-        d.add_page_break()
-        d.add_heading(l["img_report"], level=2)
-        cols = list(img_rows[0].keys())
-        t2 = d.add_table(rows=1, cols=len(cols))
-        for i, h in enumerate(cols):
-            t2.rows[0].cells[i].text = h
-        for row_data in img_rows:
-            row = t2.add_row().cells
-            for i, key in enumerate(cols):
-                row[i].text = str(row_data.get(key, ""))
-
-    if tables_rows:
-        d.add_page_break()
-        d.add_heading("Tables / Таблицы", level=2)
-        cols_t = list(tables_rows[0].keys())
-        t3 = d.add_table(rows=1, cols=len(cols_t))
-        for i, h in enumerate(cols_t):
-            t3.rows[0].cells[i].text = h
-        for row_data in tables_rows:
-            row = t3.add_row().cells
-            for i, key in enumerate(cols_t):
-                row[i].text = str(row_data.get(key, ""))
-
     d.save(buf)
     buf.seek(0)
     return buf.getvalue()
@@ -757,7 +592,7 @@ if uploaded_file:
         doc      = Document(uploaded_file)
         results, full_text, title, main_lang = check_article(doc, l)
         df       = pd.DataFrame(results)
-        img_rows, tables_rows = analyse_figures_and_tables(doc, full_text, l)
+        fig_phrases, tbl_phrases = extract_figure_table_phrases(full_text, l)
 
     passed = sum(1 for r in results if r["Статус"] == "✅")
     warned = sum(1 for r in results if r["Статус"] == "⚠️")
@@ -791,20 +626,23 @@ if uploaded_file:
         column_config={"№": st.column_config.NumberColumn(width="small")},
     )
 
-    if img_rows:
-        st.markdown(l["img_report"])
-        df_img = pd.DataFrame(img_rows)
-        scol   = l["img_status"]
-        def hl_img(row): return [_ST.get(row[scol], _BASE)] * len(row)
-        st.dataframe(
-            df_img.style.apply(hl_img, axis=1),
-            use_container_width=True,
-        )
-
-    if tables_rows:
-        st.markdown("### 📊 Таблицы / Tables")
-        df_tbl = pd.DataFrame(tables_rows)
-        st.dataframe(df_tbl, use_container_width=True)
+    # блок с фразами для рисунков/таблиц
+    st.markdown("### 🖼️/📊 " + l["fig_phrase_title"] + " / " + l["tbl_phrase_title"])
+    col_f, col_t = st.columns(2)
+    with col_f:
+        st.markdown(f"**Figure / Рисунок / Сурет** — {len(fig_phrases)}")
+        if fig_phrases:
+            st.dataframe(
+                pd.DataFrame({"Phrase": fig_phrases}),
+                use_container_width=True,
+            )
+    with col_t:
+        st.markdown(f"**Table / Таблица / Кесте** — {len(tbl_phrases)}")
+        if tbl_phrases:
+            st.dataframe(
+                pd.DataFrame({"Phrase": tbl_phrases}),
+                use_container_width=True,
+            )
 
     st.markdown("---")
     ca, cb, cc = st.columns(3)
@@ -820,10 +658,6 @@ if uploaded_file:
     xb = BytesIO()
     with pd.ExcelWriter(xb, engine="openpyxl") as w:
         df.to_excel(w, index=False, sheet_name="Report")
-        if img_rows:
-            pd.DataFrame(img_rows).to_excel(w, index=False, sheet_name="Images")
-        if tables_rows:
-            pd.DataFrame(tables_rows).to_excel(w, index=False, sheet_name="Tables")
     cb.download_button(
         l["btn_xls"],
         xb.getvalue(),
@@ -831,25 +665,9 @@ if uploaded_file:
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     )
 
-    if img_rows:
-        st.download_button(
-            l["btn_csv_fig"],
-            pd.DataFrame(img_rows).to_csv(index=False).encode("utf-8-sig"),
-            f"{bn}_figures.csv",
-            "text/csv",
-        )
-    if tables_rows:
-        st.download_button(
-            l["btn_csv_tbl"],
-            pd.DataFrame(tables_rows).to_csv(index=False).encode("utf-8-sig"),
-            f"{bn}_tables.csv",
-            "text/csv",
-        )
-
     cc.download_button(
         l["btn_docx"],
-        build_docx_report(results, l, total, passed, warned, failed, score,
-                          img_rows, tables_rows),
+        build_docx_report(results, l, total, passed, warned, failed, score),
         f"{bn}.docx",
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     )
