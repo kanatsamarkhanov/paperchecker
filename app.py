@@ -62,6 +62,10 @@ locales = {
     "c_tables":"Таблицы","c_tables_req":"Должны быть в тексте",
     "c_images":"Рисунки","c_images_req":"600 DPI, TIFF/JPEG/PNG",
     "c_multi_ann":"Многоязычные аннотации","c_multi_ann_req":"Ещё 2 аннотации на других языках",
+    "c_ref_apa":"Литература: стиль APA",
+    "c_ref_apa_req":"Формат Author, A. A. (год).",
+    "c_ref_age":"Литература: давность источников",
+    "c_ref_age_req_prefix":"Годы ≥ ",
     "img_see_table":"см. таблицу ниже",
     "found":"Найдено","not_found":"Отсутствует","words":"слов",
     "f_author":"Канат Самарханов / Kanat Samarkhanov","f_license":"Лицензия",
@@ -116,6 +120,10 @@ locales = {
     "c_tables":"Кестелер","c_tables_req":"Мәтінде болуы керек",
     "c_images":"Суреттер","c_images_req":"600 DPI, TIFF/JPEG/PNG",
     "c_multi_ann":"Көптілді аңдатпалар","c_multi_ann_req":"Басқа 2 тілде аңдатпа болуы керек",
+    "c_ref_apa":"Әдебиет: APA стилі",
+    "c_ref_apa_req":"Формат Author, A. A. (жыл).",
+    "c_ref_age":"Әдебиет: дереккөздердің жаңалығы",
+    "c_ref_age_req_prefix":"Жылдар ≥ ",
     "img_see_table":"төмендегі кестені қараңыз",
     "found":"Табылды","not_found":"Жоқ","words":"сөз",
     "f_author":"Канат Самарханов / Kanat Samarkhanov","f_license":"Лицензия",
@@ -170,6 +178,10 @@ locales = {
     "c_tables":"Tables","c_tables_req":"Must be in text",
     "c_images":"Figures","c_images_req":"600 DPI, TIFF/JPEG/PNG",
     "c_multi_ann":"Multilingual abstracts","c_multi_ann_req":"2 more abstracts in other languages",
+    "c_ref_apa":"References: APA style",
+    "c_ref_apa_req":"Format Author, A. A. (year).",
+    "c_ref_age":"References: recency of sources",
+    "c_ref_age_req_prefix":"Years ≥ ",
     "img_see_table":"see table below",
     "found":"Found","not_found":"Not found","words":"words",
     "f_author":"Kanat Samarkhanov","f_license":"License",
@@ -277,7 +289,6 @@ def extract_title_and_lang(doc):
     non_empty  = [p.text.strip() for p in doc.paragraphs if p.text.strip()]
     candidates = non_empty[2:4] if len(non_empty) >= 3 else non_empty
     title = max(candidates, key=len) if candidates else ""
-    # язык статьи определяем только по названию
     return title, detect_lang_from_text(title)
 
 def title_for_filename(title):
@@ -315,7 +326,6 @@ _ANN_PATTERNS = {
 }
 
 def extract_abstract(full_text, lang, region=None):
-    # region игнорируем — ищем по всему тексту
     txt = full_text
     m = _ANN_PATTERNS[lang].search(txt)
     return m.group(1).strip() if m else None
@@ -324,30 +334,32 @@ def extract_abstract(full_text, lang, region=None):
 _ALLOWED_FORMATS = {"TIFF", "JPEG", "PNG"}
 _MIN_DPI = 600
 
-# подписи под рисунками: Figure 1., Сурет 1., Рисунок 1.
 _CAPTION_FIG_RE = re.compile(
     r"^\s*(Figure|Сурет|Рисунок)\s+(\d+)\s*\.", re.IGNORECASE | re.MULTILINE
 )
-# подписи под таблицами: Table 1., Кесте 1., Таблица 1.
 _CAPTION_TBL_RE = re.compile(
     r"^\s*(Table|Кесте|Таблица)\s+(\d+)\s*\.", re.IGNORECASE | re.MULTILINE
 )
 
-# ссылки в тексте на рисунки
 _REF_FIG_RE = re.compile(
     r"\b(Figure|Fig\.?|Сурет|Рисунок)\s+(\d+)\b", re.IGNORECASE
 )
-# ссылки в тексте на таблицы
 _REF_TBL_RE = re.compile(
     r"\b(Table|Таблица|Табл\.?|Кесте)\s+(\d+)\b", re.IGNORECASE
 )
+
+def _yes_no(val, lang_code):
+    if lang_code == "ru":
+        return "Да" if val else "Нет"
+    if lang_code == "kz":
+        return "Иә" if val else "Жоқ"
+    return "Yes" if val else "No"
 
 def analyse_figures_and_tables(doc, full_text, l):
     EMU = 914400
     img_rows = []
     tables_rows = []
 
-    # ссылки в тексте по всему документу
     fig_refs = {}
     for m in _REF_FIG_RE.finditer(full_text):
         num = int(m.group(2))
@@ -359,6 +371,7 @@ def analyse_figures_and_tables(doc, full_text, l):
         tbl_refs[num] = tbl_refs.get(num, 0) + 1
 
     paras = list(doc.paragraphs)
+    lang_code = st.session_state.lang
 
     # рисунки
     for idx, shape in enumerate(doc.inline_shapes):
@@ -386,7 +399,6 @@ def analyse_figures_and_tables(doc, full_text, l):
             m_cap = _CAPTION_FIG_RE.search(cap_text)
             if m_cap:
                 label_num = int(m_cap.group(2))
-            # проверка жирности подписи
             for run in cap_par.runs:
                 if run.text.strip() and run.bold:
                     cap_bold = True
@@ -439,12 +451,8 @@ def analyse_figures_and_tables(doc, full_text, l):
             l["img_format"]: fmt,
             l["img_caption"]: caption or l["not_found"],
             l["img_ref"]: ref_count,
-            l["img_composite"]: "Да" if is_composite else "Нет" if l is locales["ru"] else (
-                "Иә" if is_composite and l is locales["kz"] else ("Yes" if is_composite else "No")
-            ),
-            l["img_capbold"]: "Да" if cap_bold else "Нет" if l is locales["ru"] else (
-                "Иә" if cap_bold and l is locales["kz"] else ("Yes" if cap_bold else "No")
-            ),
+            l["img_composite"]: _yes_no(is_composite, lang_code),
+            l["img_capbold"]: _yes_no(cap_bold, lang_code),
             l["img_status"]: status,
         })
 
@@ -459,7 +467,6 @@ def analyse_figures_and_tables(doc, full_text, l):
         caption_above = False
         header_bold_ok = True
 
-        # подпись только сверху
         if tbl_par_idx is not None and tbl_par_idx > 0:
             tx = paras[tbl_par_idx-1].text.strip()
             if tx:
@@ -470,7 +477,6 @@ def analyse_figures_and_tables(doc, full_text, l):
         tnum = int(m_cap.group(2)) if m_cap else t_idx
         ref_count = tbl_refs.get(tnum, 0)
 
-        # проверка жирности заголовков
         if table.rows:
             header_row = table.rows[0]
             for cell in header_row.cells:
@@ -493,12 +499,8 @@ def analyse_figures_and_tables(doc, full_text, l):
             l["tbl_label"]: f"Table {tnum}",
             l["tbl_caption"]: cap or l["not_found"],
             l["tbl_ref"]: ref_count,
-            l["tbl_capabove"]: "Да" if caption_above else "Нет" if l is locales["ru"] else (
-                "Иә" if caption_above and l is locales["kz"] else ("Yes" if caption_above else "No")
-            ),
-            l["tbl_headbold"]: "Да" if header_bold_ok else "Нет" if l is locales["ru"] else (
-                "Иә" if header_bold_ok and l is locales["kz"] else ("Yes" if header_bold_ok else "No")
-            ),
+            l["tbl_capabove"]: _yes_no(caption_above, lang_code),
+            l["tbl_headbold"]: _yes_no(header_bold_ok, lang_code),
         })
 
     return img_rows, tables_rows
@@ -512,7 +514,6 @@ def detect_author_count(doc, orcid_count):
             return len(parts)
     return 1
 
-# ── Main checker ──────────────────────────────────────────────────────────
 _ALL_LANGS   = ["ru", "kz", "en"]
 _LANG_LABELS = {"ru": "Русский", "kz": "Қазақша", "en": "English"}
 _ANN_KEYS    = {"ru": "c_ann_ru", "kz": "c_ann_kz", "en": "c_ann_en"}
@@ -624,34 +625,7 @@ def check_article(doc, l):
     else:
         add(20, "References / Список литературы", l["c_req_obl"], l["not_found"], "❌")
 
-    # дополнительные критерии: стиль APA и давность источников
-    CURRENT_YEAR = datetime.datetime.now().year
-    min_year = max_year = None
-    yrs_ok = True
-    apa_ok = False
-
-    if refs_text:
-        years = re.findall(r"\((\d{4})\)", refs_text)
-        years = [int(y) for y in years if 1900 <= int(y) <= CURRENT_YEAR]
-        if years:
-            min_year = min(years)
-            max_year = max(years)
-            # не старше 10 лет
-            threshold = CURRENT_YEAR - 10
-            old_years = [y for y in years if y < threshold]
-            yrs_ok = len(old_years) == 0
-        # очень грубая проверка APA: наличие паттерна 'Surname, A.'
-        if re.search(r"[A-Z][a-z]+,\s*[A-Z]\.", refs_text):
-            apa_ok = True
-
-    yrs_req = f"Годы ≥ {CURRENT_YEAR - 10}"
-    yrs_found = f"min={min_year if min_year else '–'}, max={max_year if max_year else '–'}"
-    add(27, "Литература: стиль APA", "Формат Author, A. A. (год).",
-        "Найден шаблон" if apa_ok else "Шаблон не найден",
-        "✅" if apa_ok else "⚠️")
-    add(28, "Литература: давность источников", yrs_req,
-        yrs_found, "✅" if yrs_ok else "❌")
-
+    # 26 уже добавлен ниже; сначала бумага/поля/шрифт/таблицы/рисунки/многоязычие
     try:
         sec   = doc.sections[0]
         w_mm  = round(sec.page_width.mm); h_mm = round(sec.page_height.mm)
@@ -683,6 +657,41 @@ def check_article(doc, l):
     ok_multi = all(has_other.values())
     add(26, l["c_multi_ann"], l["c_multi_ann_req"],
         l["found"] if ok_multi else l["not_found"], "✅" if ok_multi else "❌")
+
+    # 27–28: APA и давность источников
+    CURRENT_YEAR = datetime.datetime.now().year
+    min_year = max_year = None
+    yrs_ok = True
+    apa_ok = False
+
+    if refs_text:
+        years = re.findall(r"\((\d{4})\)", refs_text)
+        years = [int(y) for y in years if 1900 <= int(y) <= CURRENT_YEAR]
+        if years:
+            min_year = min(years)
+            max_year = max(years)
+            threshold = CURRENT_YEAR - 10
+            old_years = [y for y in years if y < threshold]
+            yrs_ok = len(old_years) == 0
+        if re.search(r"[A-Z][a-z]+,\s*[A-Z]\.", refs_text):
+            apa_ok = True
+
+    yrs_req = f"{l['c_ref_age_req_prefix']}{CURRENT_YEAR - 10}"
+    yrs_found = f"min={min_year if min_year else '–'}, max={max_year if max_year else '–'}"
+
+    lang_code = st.session_state.lang
+    found_txt = {
+        "ru": ("Найден шаблон", "Шаблон не найден"),
+        "kz": ("Үлгі табылды", "Үлгі табылмады"),
+        "en": ("Pattern found", "Pattern not found"),
+    }[lang_code]
+
+    add(27, l["c_ref_apa"], l["c_ref_apa_req"],
+        found_txt[0] if apa_ok else found_txt[1],
+        "✅" if apa_ok else "⚠️")
+
+    add(28, l["c_ref_age"], yrs_req,
+        yrs_found, "✅" if yrs_ok else "❌")
 
     return results, full_text, title, main_lang
 
