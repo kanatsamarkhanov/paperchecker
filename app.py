@@ -311,26 +311,39 @@ def extract_abstract(full_text, lang, region=None):
 _ALLOWED_FORMATS = {"TIFF", "JPEG", "PNG"}
 _MIN_DPI = 600
 
-_FIG_RE = re.compile(r"(рис\.?|figure)\s*(\d+)", re.IGNORECASE)
-_TBL_RE = re.compile(r"(табл\.?|table)\s*(\d+)", re.IGNORECASE)
+# подписи под рисунками: Figure 1., Сурет 1., Рисунок 1.
+_CAPTION_FIG_RE = re.compile(
+    r"^\s*(Figure|Сурет|Рисунок)\s+(\d+)\s*\.", re.IGNORECASE | re.MULTILINE
+)
+# подписи под таблицами: Table 1., Кесте 1., Таблица 1.
+_CAPTION_TBL_RE = re.compile(
+    r"^\s*(Table|Кесте|Таблица)\s+(\d+)\s*\.", re.IGNORECASE | re.MULTILINE
+)
+
+# ссылки в тексте на рисунки
+_REF_FIG_RE = re.compile(
+    r"\b(Figure|Fig\.?|Сурет|Рисунок)\s+(\d+)\b", re.IGNORECASE
+)
+# ссылки в тексте на таблицы
+_REF_TBL_RE = re.compile(
+    r"\b(Table|Таблица|Табл\.?|Кесте)\s+(\d+)\b", re.IGNORECASE
+)
 
 def analyse_figures_and_tables(doc, full_text, l):
     EMU = 914400
     img_rows = []
     tables_rows = []
 
-    # ссылки в тексте
+    # ссылки в тексте по всему документу
     fig_refs = {}
-    for m in _FIG_RE.finditer(full_text):
+    for m in _REF_FIG_RE.finditer(full_text):
         num = int(m.group(2))
-        fig_refs.setdefault(num, 0)
-        fig_refs[num] += 1
+        fig_refs[num] = fig_refs.get(num, 0) + 1
 
     tbl_refs = {}
-    for m in _TBL_RE.finditer(full_text):
+    for m in _REF_TBL_RE.finditer(full_text):
         num = int(m.group(2))
-        tbl_refs.setdefault(num, 0)
-        tbl_refs[num] += 1
+        tbl_refs[num] = tbl_refs.get(num, 0) + 1
 
     paras = list(doc.paragraphs)
 
@@ -353,9 +366,9 @@ def analyse_figures_and_tables(doc, full_text, l):
         if par_idx is not None and par_idx + 1 < len(paras):
             cap_text = paras[par_idx+1].text.strip()
             caption = cap_text
-            m_lab = _FIG_RE.search(cap_text)
-            if m_lab:
-                label_num = int(m_lab.group(2))
+            m_cap = _CAPTION_FIG_RE.search(cap_text)
+            if m_cap:
+                label_num = int(m_cap.group(2))
         if label_num is None:
             label_num = idx + 1
 
@@ -386,6 +399,8 @@ def analyse_figures_and_tables(doc, full_text, l):
             dpi_calc = dpi_emb = real_dpi_str = fmt = "-"
             status = "⚠️"
 
+        ref_count = fig_refs.get(label_num, 0)
+
         img_rows.append({
             l["img_num"]: idx + 1,
             l["img_label"]: f"Figure {label_num}",
@@ -398,7 +413,7 @@ def analyse_figures_and_tables(doc, full_text, l):
             l["img_dpi_real"]: real_dpi_str,
             l["img_format"]: fmt,
             l["img_caption"]: caption or l["not_found"],
-            l["img_ref"]: fig_refs.get(label_num, 0),
+            l["img_ref"]: ref_count,
             l["img_status"]: status,
         })
 
@@ -420,13 +435,14 @@ def analyse_figures_and_tables(doc, full_text, l):
                 if tx:
                     cap = tx
 
-        m_tbl_num = _TBL_RE.search(cap) if cap else None
-        tnum = int(m_tbl_num.group(2)) if m_tbl_num else t_idx
+        m_cap = _CAPTION_TBL_RE.search(cap) if cap else None
+        tnum = int(m_cap.group(2)) if m_cap else t_idx
+        ref_count = tbl_refs.get(tnum, 0)
 
         tables_rows.append({
             l["tbl_label"]: f"Table {tnum}",
             l["tbl_caption"]: cap or l["not_found"],
-            l["tbl_ref"]: tbl_refs.get(tnum, 0),
+            l["tbl_ref"]: ref_count,
         })
 
     return img_rows, tables_rows
@@ -721,7 +737,6 @@ if uploaded_file:
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     )
 
-    # отдельные CSV по фигурам/таблицам
     if img_rows:
         st.download_button(
             l["btn_csv_fig"],
