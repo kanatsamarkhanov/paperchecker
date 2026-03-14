@@ -5,6 +5,7 @@ from PIL import Image
 import re
 import pandas as pd
 from io import BytesIO
+import datetime
 
 st.set_page_config(page_title="Article Checker / Мақала тексеру", page_icon="📋", layout="wide")
 
@@ -30,15 +31,19 @@ locales = {
     "img_ref":"Ссылок в тексте",
     "img_width":"Ширина (см)",
     "img_height":"Высота (см)",
+    "img_composite":"Возможно составной рисунок",
+    "img_capbold":"Подпись жирная",
     "tbl_label":"Номер таблицы",
     "tbl_caption":"Подпись таблицы",
     "tbl_ref":"Ссылок в тексте",
+    "tbl_capabove":"Подпись над таблицей",
+    "tbl_headbold":"Заголовки жирные",
     "btn_csv":"⬇️ Скачать CSV","btn_xls":"⬇️ Скачать Excel","btn_docx":"⬇️ Word (DOCX)",
     "btn_csv_fig":"⬇️ CSV (рисунки)","btn_csv_tbl":"⬇️ CSV (таблицы)",
     "req_fix":"### ⚠️ Требует исправления","req":"требование",
     "no_file":"👆 Загрузите .docx файл, чтобы начать проверку",
     "c_title":"Наименование статьи","c_title_req":"Строки 3–4 документа",
-    "c_lang":"Язык статьи","c_lang_req":"По преобладанию символов",
+    "c_lang":"Язык статьи","c_lang_req":"По названию статьи",
     "c_vol":"Объём статьи","c_vol_req":"≥3500 слов",
     "c_ann_main":"Основная аннотация","c_ann_req":"≤300 слов",
     "c_ann_ru":"Аннотация (рус)","c_ann_kz":"Аннотация (каз)","c_ann_en":"Abstract (англ)",
@@ -46,7 +51,8 @@ locales = {
     "c_kw":"Ключевые слова","c_kw_req":"3–10, разделитель «;»",
     "c_mrnti":"Код МРНТИ / IRSTI","c_orcid":"ORCID авторов","c_orcid_req":"Для каждого автора",
     "c_intro":"§1. Введение","c_mm":"§2. Материалы и методы",
-    "c_res":"§3. Результаты","c_disc":"§4. Обсуждение","c_concl":"§5. Заключение",
+    "c_res":"§3. Результаты","c_disc":"§4. Талдау",
+    "c_concl":"§5. Заключение",
     "c_supp":"§6. Вспомог. материал","c_contrib":"§7. Вклад авторов",
     "c_authinfo":"§8. Информация об авторе","c_fund":"§9. Финансирование",
     "c_ack":"§10. Благодарности","c_conflict":"§11. Конфликты интересов",
@@ -79,15 +85,19 @@ locales = {
     "img_ref":"Мәтінде сілтемелер саны",
     "img_width":"Ені (см)",
     "img_height":"Биіктігі (см)",
+    "img_composite":"Құрама сурет болуы мүмкін",
+    "img_capbold":"Қалың қаріппен бе",
     "tbl_label":"Кесте нөмірі",
     "tbl_caption":"Кесте атауы",
     "tbl_ref":"Мәтінде сілтемелер саны",
+    "tbl_capabove":"Жазуы кестенің үстінде",
+    "tbl_headbold":"Баған атаулары қалың",
     "btn_csv":"⬇️ CSV жүктеу","btn_xls":"⬇️ Excel жүктеу","btn_docx":"⬇️ Word (DOCX)",
     "btn_csv_fig":"⬇️ CSV (суреттер)","btn_csv_tbl":"⬇️ CSV (кестелер)",
     "req_fix":"### ⚠️ Түзетуді қажет етеді","req":"талап",
     "no_file":"👆 Тексеруді бастау үшін .docx файлын жүктеңіз",
     "c_title":"Мақаланың атауы","c_title_req":"Құжаттың 3–4 жолдары",
-    "c_lang":"Мақала тілі","c_lang_req":"Таңбалардың басымдылығы бойынша",
+    "c_lang":"Мақала тілі","c_lang_req":"Мақала атауына қарай",
     "c_vol":"Мақала көлемі","c_vol_req":"≥3500 сөз",
     "c_ann_main":"Негізгі аңдатпа","c_ann_req":"≤300 сөз",
     "c_ann_ru":"Аңдатпа (орыс)","c_ann_kz":"Аңдатпа (қаз)","c_ann_en":"Abstract (ағылш)",
@@ -95,7 +105,8 @@ locales = {
     "c_kw":"Түйінді сөздер","c_kw_req":"3–10, бөлгіш «;»",
     "c_mrnti":"МРНТИ / IRSTI коды","c_orcid":"Авторлардың ORCID","c_orcid_req":"Әр автор үшін",
     "c_intro":"§1. Кіріспе","c_mm":"§2. Материалдар мен әдістер",
-    "c_res":"§3. Нәтижелер","c_disc":"§4. Талқылау","c_concl":"§5. Қорытынды",
+    "c_res":"§3. Нәтижелер","c_disc":"§4. Талдау",
+    "c_concl":"§5. Қорытынды",
     "c_supp":"§6. Қосымша материалдар","c_contrib":"§7. Авторлардың үлесі",
     "c_authinfo":"§8. Автор туралы ақпарат","c_fund":"§9. Қаржыландыру",
     "c_ack":"§10. Алғыстар","c_conflict":"§11. Мүдделер қақтығысы",
@@ -128,15 +139,19 @@ locales = {
     "img_ref":"References in text",
     "img_width":"Width (cm)",
     "img_height":"Height (cm)",
+    "img_composite":"Possibly composite figure",
+    "img_capbold":"Caption in bold",
     "tbl_label":"Table number",
     "tbl_caption":"Table caption",
     "tbl_ref":"References in text",
+    "tbl_capabove":"Caption above table",
+    "tbl_headbold":"Header row in bold",
     "btn_csv":"⬇️ Download CSV","btn_xls":"⬇️ Download Excel","btn_docx":"⬇️ Word (DOCX)",
     "btn_csv_fig":"⬇️ CSV (figures)","btn_csv_tbl":"⬇️ CSV (tables)",
     "req_fix":"### ⚠️ Requires Correction","req":"requirement",
     "no_file":"👆 Upload a .docx file to start checking",
     "c_title":"Article title","c_title_req":"Lines 3–4 of document",
-    "c_lang":"Article language","c_lang_req":"By character prevalence",
+    "c_lang":"Article language","c_lang_req":"By article title",
     "c_vol":"Article volume","c_vol_req":"≥3500 words",
     "c_ann_main":"Main abstract","c_ann_req":"≤300 words",
     "c_ann_ru":"Abstract (rus)","c_ann_kz":"Abstract (kaz)","c_ann_en":"Abstract (eng)",
@@ -144,7 +159,8 @@ locales = {
     "c_kw":"Keywords","c_kw_req":"3–10, separator ;",
     "c_mrnti":"IRSTI / МРНТИ code","c_orcid":"Author ORCIDs","c_orcid_req":"Per each author",
     "c_intro":"§1. Introduction","c_mm":"§2. Materials & Methods",
-    "c_res":"§3. Results","c_disc":"§4. Discussion","c_concl":"§5. Conclusion",
+    "c_res":"§3. Results","c_disc":"§4. Discussion",
+    "c_concl":"§5. Conclusion",
     "c_supp":"§6. Supplementary Material","c_contrib":"§7. Author Contributions",
     "c_authinfo":"§8. Author Information","c_fund":"§9. Funding",
     "c_ack":"§10. Acknowledgements","c_conflict":"§11. Conflicts of Interest",
@@ -261,6 +277,7 @@ def extract_title_and_lang(doc):
     non_empty  = [p.text.strip() for p in doc.paragraphs if p.text.strip()]
     candidates = non_empty[2:4] if len(non_empty) >= 3 else non_empty
     title = max(candidates, key=len) if candidates else ""
+    # язык статьи определяем только по названию
     return title, detect_lang_from_text(title)
 
 def title_for_filename(title):
@@ -298,12 +315,8 @@ _ANN_PATTERNS = {
 }
 
 def extract_abstract(full_text, lang, region=None):
+    # region игнорируем — ищем по всему тексту
     txt = full_text
-    if region in ('top', 'bottom'):
-        m_ref = re.search(r"список литературы|references|әдебиет(тер)? тізімі", full_text, re.IGNORECASE)
-        if m_ref:
-            cut = m_ref.start() if region == 'top' else m_ref.end()
-            txt = full_text[:cut] if region == 'top' else full_text[cut:]
     m = _ANN_PATTERNS[lang].search(txt)
     return m.group(1).strip() if m else None
 
@@ -363,14 +376,26 @@ def analyse_figures_and_tables(doc, full_text, l):
 
         caption = ""
         label_num = None
+        cap_bold = False
+        is_composite = False
+
         if par_idx is not None and par_idx + 1 < len(paras):
-            cap_text = paras[par_idx+1].text.strip()
+            cap_par = paras[par_idx+1]
+            cap_text = cap_par.text.strip()
             caption = cap_text
             m_cap = _CAPTION_FIG_RE.search(cap_text)
             if m_cap:
                 label_num = int(m_cap.group(2))
+            # проверка жирности подписи
+            for run in cap_par.runs:
+                if run.text.strip() and run.bold:
+                    cap_bold = True
+                    break
+
         if label_num is None:
             label_num = idx + 1
+        if not caption:
+            is_composite = True
 
         try:
             pic  = shape._inline.graphic.graphicData.pic
@@ -414,6 +439,12 @@ def analyse_figures_and_tables(doc, full_text, l):
             l["img_format"]: fmt,
             l["img_caption"]: caption or l["not_found"],
             l["img_ref"]: ref_count,
+            l["img_composite"]: "Да" if is_composite else "Нет" if l is locales["ru"] else (
+                "Иә" if is_composite and l is locales["kz"] else ("Yes" if is_composite else "No")
+            ),
+            l["img_capbold"]: "Да" if cap_bold else "Нет" if l is locales["ru"] else (
+                "Иә" if cap_bold and l is locales["kz"] else ("Yes" if cap_bold else "No")
+            ),
             l["img_status"]: status,
         })
 
@@ -425,24 +456,49 @@ def analyse_figures_and_tables(doc, full_text, l):
             if table._tbl in p._p:
                 tbl_par_idx = pi
                 break
-        if tbl_par_idx is not None:
-            if tbl_par_idx > 0:
-                tx = paras[tbl_par_idx-1].text.strip()
-                if tx:
-                    cap = tx
-            if not cap and tbl_par_idx + 1 < len(paras):
-                tx = paras[tbl_par_idx+1].text.strip()
-                if tx:
-                    cap = tx
+        caption_above = False
+        header_bold_ok = True
+
+        # подпись только сверху
+        if tbl_par_idx is not None and tbl_par_idx > 0:
+            tx = paras[tbl_par_idx-1].text.strip()
+            if tx:
+                cap = tx
+                caption_above = True
 
         m_cap = _CAPTION_TBL_RE.search(cap) if cap else None
         tnum = int(m_cap.group(2)) if m_cap else t_idx
         ref_count = tbl_refs.get(tnum, 0)
 
+        # проверка жирности заголовков
+        if table.rows:
+            header_row = table.rows[0]
+            for cell in header_row.cells:
+                cell_text = cell.text.strip()
+                if not cell_text:
+                    continue
+                any_bold = False
+                for p in cell.paragraphs:
+                    for r in p.runs:
+                        if r.text.strip() and r.bold:
+                            any_bold = True
+                            break
+                    if any_bold:
+                        break
+                if not any_bold:
+                    header_bold_ok = False
+                    break
+
         tables_rows.append({
             l["tbl_label"]: f"Table {tnum}",
             l["tbl_caption"]: cap or l["not_found"],
             l["tbl_ref"]: ref_count,
+            l["tbl_capabove"]: "Да" if caption_above else "Нет" if l is locales["ru"] else (
+                "Иә" if caption_above and l is locales["kz"] else ("Yes" if caption_above else "No")
+            ),
+            l["tbl_headbold"]: "Да" if header_bold_ok else "Нет" if l is locales["ru"] else (
+                "Иә" if header_bold_ok and l is locales["kz"] else ("Yes" if header_bold_ok else "No")
+            ),
         })
 
     return img_rows, tables_rows
@@ -478,7 +534,7 @@ def check_article(doc, l):
         "✅" if word_count >= 3500 else "⚠️")
 
     other_langs = [lg for lg in _ALL_LANGS if lg != main_lang]
-    main_ann_text = extract_abstract(full_text, main_lang, region='top')
+    main_ann_text = extract_abstract(full_text, main_lang, region=None)
     main_label    = f"{l['c_ann_main']} ({_LANG_LABELS[main_lang]})"
     if main_ann_text:
         aw = len(main_ann_text.split())
@@ -489,7 +545,7 @@ def check_article(doc, l):
 
     has_other = {}
     for num, olang in zip([4, 5], other_langs):
-        ann_text = extract_abstract(full_text, olang, region='bottom')
+        ann_text = extract_abstract(full_text, olang, region=None)
         has_other[olang] = ann_text is not None
         add(num, l[_ANN_KEYS[olang]], l["c_req_obl"],
             l["found"] if has_other[olang] else l["not_found"],
@@ -517,7 +573,7 @@ def check_article(doc, l):
         (10, l["c_mm"],    ["материалы и методы","материалдар мен әдістер",
                             "materials and methods","материал","әдістер"]),
         (11, l["c_res"],   ["результаты","нәтижелер","results"]),
-        (12, l["c_disc"],  ["обсуждение","талқылау","discussion"]),
+        (12, l["c_disc"],  ["обсуждение","талқылау","талдау","discussion"]),
         (13, l["c_concl"], ["заключение","қорытынды","conclusion"]),
     ]:
         f = any(k in text_low for k in keys)
@@ -556,6 +612,7 @@ def check_article(doc, l):
         m2 = re.search(pat, text_low)
         if m2: refs_match = m2; break
 
+    refs_text = ""
     if refs_match:
         refs_text = full_text[refs_match.end():]
         rl = re.findall(r"\n\s*(\[\d+\]|\d+[.)]) ", refs_text)
@@ -566,6 +623,34 @@ def check_article(doc, l):
             str(rc), "✅" if rc >= 10 else "⚠️")
     else:
         add(20, "References / Список литературы", l["c_req_obl"], l["not_found"], "❌")
+
+    # дополнительные критерии: стиль APA и давность источников
+    CURRENT_YEAR = datetime.datetime.now().year
+    min_year = max_year = None
+    yrs_ok = True
+    apa_ok = False
+
+    if refs_text:
+        years = re.findall(r"\((\d{4})\)", refs_text)
+        years = [int(y) for y in years if 1900 <= int(y) <= CURRENT_YEAR]
+        if years:
+            min_year = min(years)
+            max_year = max(years)
+            # не старше 10 лет
+            threshold = CURRENT_YEAR - 10
+            old_years = [y for y in years if y < threshold]
+            yrs_ok = len(old_years) == 0
+        # очень грубая проверка APA: наличие паттерна 'Surname, A.'
+        if re.search(r"[A-Z][a-z]+,\s*[A-Z]\.", refs_text):
+            apa_ok = True
+
+    yrs_req = f"Годы ≥ {CURRENT_YEAR - 10}"
+    yrs_found = f"min={min_year if min_year else '–'}, max={max_year if max_year else '–'}"
+    add(27, "Литература: стиль APA", "Формат Author, A. A. (год).",
+        "Найден шаблон" if apa_ok else "Шаблон не найден",
+        "✅" if apa_ok else "⚠️")
+    add(28, "Литература: давность источников", yrs_req,
+        yrs_found, "✅" if yrs_ok else "❌")
 
     try:
         sec   = doc.sections[0]
